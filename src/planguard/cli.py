@@ -12,6 +12,7 @@ from planguard.config import ConfigError, load_config, parse_fail_on
 from planguard.parser import PlanError, load_plan, parse_changes
 from planguard.report import build_report, render_json, render_markdown
 from planguard.rules import RULES
+from planguard.terminal import render_text, use_color
 
 EXIT_OK = 0
 EXIT_RISK = 1
@@ -36,7 +37,13 @@ def _parser() -> argparse.ArgumentParser:
         "-c", "--config", help="path to .planguard.yml (default: ./.planguard.yml if present)"
     )
     analyze.add_argument(
-        "-f", "--format", choices=("md", "json"), default="md", help="stdout format (default: md)"
+        "-f",
+        "--format",
+        choices=("text", "md", "json"),
+        help="stdout format (default: text in a terminal, md when piped)",
+    )
+    analyze.add_argument(
+        "--no-color", action="store_true", help="disable colors in text output (or set NO_COLOR)"
     )
     analyze.add_argument(
         "--fail-on",
@@ -63,7 +70,13 @@ def _analyze(args: argparse.Namespace) -> int:
         Path(args.output).write_text(markdown, encoding="utf-8")
     if args.json_output:
         Path(args.json_output).write_text(as_json, encoding="utf-8")
-    sys.stdout.write(as_json if args.format == "json" else markdown)
+    fmt = args.format or ("text" if sys.stdout.isatty() else "md")
+    if fmt == "json":
+        sys.stdout.write(as_json)
+    elif fmt == "md":
+        sys.stdout.write(markdown)
+    else:
+        sys.stdout.write(render_text(report, color=not args.no_color and use_color(sys.stdout)))
     return EXIT_RISK if report.failed else EXIT_OK
 
 

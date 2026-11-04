@@ -86,3 +86,21 @@ def test_module_entrypoint(fixture_path):
         [sys.executable, "-m", "planguard", "--version"], capture_output=True, text=True
     )
     assert result.stdout.strip() == f"planguard {__version__}"
+
+
+def test_default_format_is_md_when_piped(fixture_path, capsys):
+    main(["analyze", str(fixture_path("safe"))])
+    assert capsys.readouterr().out.startswith("<!-- planguard")
+
+
+def test_default_format_is_text_on_tty(fixture_path, monkeypatch, capsys):
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True, raising=False)
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    main(["analyze", str(fixture_path("safe")), "--no-color"])
+    out = capsys.readouterr().out
+    assert out.startswith("planguard v") and "\033[" not in out
+
+
+def test_text_format_flag(fixture_path, capsys):
+    main(["analyze", str(fixture_path("rds_replace")), "-f", "text"])
+    assert "✗ FAIL" in capsys.readouterr().out

@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `--format text`: a compact, colored terminal view (Terraform-style `+ ~ -/+ -`
+  symbols, aligned columns, PASS/FAIL line). It is the default when stdout is a
+  terminal; piped output stays Markdown, so scripts and the action are unaffected.
+- `--no-color`, plus support for the `NO_COLOR` and `FORCE_COLOR` environment variables.
+
 ## [1.0.0] - 2026-11-04
 
 ### Added
