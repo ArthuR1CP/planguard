@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "planguard"
+dynamic = ["version"]
+description = "Flag risky Terraform plan changes (destroyed databases, IAM wildcards, open security groups) before they merge."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "ArthuR1CP" }]
+keywords = ["terraform", "opentofu", "plan", "devops", "github-action", "iac", "risk"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: System :: Systems Administration",
+]
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/ArthuR1CP/planguard"
+Issues = "https://github.com/ArthuR1CP/planguard/issues"
+Changelog = "https://github.com/ArthuR1CP/planguard/blob/main/CHANGELOG.md"
+
+[project.scripts]
+planguard = "planguard.cli:main"
+
+[tool.hatch.version]
+path = "src/planguard/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/planguard"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["RUF001"]  # we intentionally use typographic characters in report text

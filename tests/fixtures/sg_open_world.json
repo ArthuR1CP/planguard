@@ -1,0 +1,161 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.5",
+  "planned_values": {
+    "root_module": {}
+  },
+  "resource_changes": [
+    {
+      "address": "aws_security_group.web",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "web",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "name": "web",
+          "vpc_id": "vpc-0abc",
+          "ingress": [
+            {
+              "from_port": 443,
+              "to_port": 443,
+              "protocol": "tcp",
+              "cidr_blocks": [
+                "0.0.0.0/0"
+              ],
+              "ipv6_cidr_blocks": [],
+              "description": "https",
+              "security_groups": [],
+              "self": false,
+              "prefix_list_ids": []
+            }
+          ],
+          "egress": [],
+          "tags": {}
+        },
+        "after": {
+          "name": "web",
+          "vpc_id": "vpc-0abc",
+          "ingress": [
+            {
+              "from_port": 443,
+              "to_port": 443,
+              "protocol": "tcp",
+              "cidr_blocks": [
+                "0.0.0.0/0"
+              ],
+              "ipv6_cidr_blocks": [],
+              "description": "https",
+              "security_groups": [],
+              "self": false,
+              "prefix_list_ids": []
+            },
+            {
+              "from_port": 22,
+              "to_port": 22,
+              "protocol": "tcp",
+              "cidr_blocks": [
+                "0.0.0.0/0"
+              ],
+              "ipv6_cidr_blocks": [],
+              "description": "ssh (temporary)",
+              "security_groups": [],
+              "self": false,
+              "prefix_list_ids": []
+            }
+          ],
+          "egress": [],
+          "tags": {}
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_vpc_security_group_ingress_rule.db",
+      "mode": "managed",
+      "type": "aws_vpc_security_group_ingress_rule",
+      "name": "db",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "security_group_id": "sg-0db",
+          "cidr_ipv6": "::/0",
+          "from_port": 5432,
+          "to_port": 5432,
+          "ip_protocol": "tcp"
+        },
+        "after_unknown": {},
+        "before_sensitive": false,
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_security_group_rule.http",
+      "mode": "managed",
+      "type": "aws_security_group_rule",
+      "name": "http",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "type": "ingress",
+          "from_port": 80,
+          "to_port": 80,
+          "protocol": "tcp",
+          "cidr_blocks": [
+            "0.0.0.0/0"
+          ],
+          "security_group_id": "sg-0abc"
+        },
+        "after_unknown": {},
+        "before_sensitive": false,
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_security_group_rule.internal",
+      "mode": "managed",
+      "type": "aws_security_group_rule",
+      "name": "internal",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "type": "ingress",
+          "from_port": 0,
+          "to_port": 65535,
+          "protocol": "-1",
+          "cidr_blocks": [
+            "10.0.0.0/8"
+          ],
+          "security_group_id": "sg-0abc"
+        },
+        "after_unknown": {},
+        "before_sensitive": false,
+        "after_sensitive": {}
+      }
+    }
+  ],
+  "configuration": {
+    "root_module": {}
+  },
+  "timestamp": "2026-11-04T10:00:00Z",
+  "applyable": true,
+  "complete": true,
+  "errored": false
+}

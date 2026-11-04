@@ -1,0 +1,113 @@
+name: planguard
+description: Flag risky Terraform plan changes (destroyed databases, IAM wildcards, open security groups) in a sticky PR comment.
+author: ArthuR1CP
+branding:
+  icon: shield
+  color: orange
+
+inputs:
+  plan-json:
+    description: Path to the JSON plan produced by `terraform show -json tfplan > plan.json`.
+    required: true
+  config:
+    description: Path to a .planguard.yml config. Defaults to ./.planguard.yml when it exists.
+    required: false
+    default: ""
+  fail-on:
+    description: Fail the step when risk >= this level (low|medium|high|critical|none). Overrides the config file; defaults to high.
+    required: false
+    default: ""
+  comment:
+    description: Create or update a single sticky comment on the pull request.
+    required: false
+    default: "true"
+  github-token:
+    description: "Token used to comment on the PR (needs `pull-requests: write`)."
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  risk:
+    description: Overall risk (NONE, LOW, MEDIUM, HIGH, CRITICAL).
+    value: ${{ steps.analyze.outputs.risk }}
+  failed:
+    description: "'true' when risk >= fail-on."
+    value: ${{ steps.analyze.outputs.failed }}
+  headline:
+    description: One-line summary of the most severe finding.
+    value: ${{ steps.analyze.outputs.headline }}
+  report-markdown:
+    description: Path to the Markdown report.
+    value: ${{ steps.analyze.outputs.report-markdown }}
+  report-json:
+    description: Path to the JSON report.
+    value: ${{ steps.analyze.outputs.report-json }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install planguard
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        python3 -c 'import sys; assert sys.version_info >= (3, 11), f"planguard needs Python 3.11+, found {sys.version}"'
+        python3 -m venv "${RUNNER_TEMP}/planguard-venv"
+        "${RUNNER_TEMP}/planguard-venv/bin/pip" install --quiet --disable-pip-version-check "${ACTION_PATH}"
+
+    - name: Analyze plan
+      id: analyze
+      shell: bash
+      env:
+        PLAN_JSON: ${{ inputs.plan-json }}
+        CONFIG: ${{ inputs.config }}
+        FAIL_ON: ${{ inputs.fail-on }}
+      run: |
+        set -uo pipefail
+        out_dir="${RUNNER_TEMP}/planguard"
+        mkdir -p "${out_dir}"
+        args=(analyze "${PLAN_JSON}" --output "${out_dir}/report.md" --json-output "${out_dir}/report.json")
+        [[ -n "${CONFIG}" ]] && args+=(--config "${CONFIG}")
+        [[ -n "${FAIL_ON}" ]] && args+=(--fail-on "${FAIL_ON}")
+
+        "${RUNNER_TEMP}/planguard-venv/bin/planguard" "${args[@]}" > /dev/null
+        code=$?
+        if [[ ${code} -ge 2 ]]; then
+          echo "::error title=planguard::analysis failed (exit ${code}); see the log above."
+          exit "${code}"
+        fi
+
+        cat "${out_dir}/report.md" >> "${GITHUB_STEP_SUMMARY}"
+        risk="$(jq -r .risk "${out_dir}/report.json")"
+        headline="$(jq -r .headline "${out_dir}/report.json")"
+        {
+          echo "exit-code=${code}"
+          echo "risk=${risk}"
+          echo "failed=$(jq -r .failed "${out_dir}/report.json")"
+          echo "headline=${headline}"
+          echo "report-markdown=${out_dir}/report.md"
+          echo "report-json=${out_dir}/report.json"
+        } >> "${GITHUB_OUTPUT}"
+        echo "planguard: ${risk}: ${headline}"
+
+    - name: Comment on pull request
+      if: inputs.comment == 'true' && (github.event_name == 'pull_request' || github.event_name == 'pull_request_target')
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPORT: ${{ steps.analyze.outputs.report-markdown }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        bash "${ACTION_PATH}/scripts/sticky_comment.sh" "${REPORT}" \
+          || echo "::warning title=planguard::could not post the PR comment (fork PR or missing 'pull-requests: write' permission?)"
+
+    - name: Enforce fail-on
+      if: steps.analyze.outputs.exit-code == '1'
+      shell: bash
+      env:
+        RISK: ${{ steps.analyze.outputs.risk }}
+        HEADLINE: ${{ steps.analyze.outputs.headline }}
+      run: |
+        echo "::error title=planguard: ${RISK}::${HEADLINE}"
+        exit 1

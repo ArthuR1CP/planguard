@@ -1,0 +1,49 @@
+# Dogfooding: plan the credential-free config in examples/ and run this repo's own action on it.
+name: demo
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false # the wrapper pollutes stdout, which breaks `show -json`
+
+      - name: Terraform plan (rev 1 -> rev 2)
+        run: |
+          terraform init -input=false
+          terraform apply -input=false -auto-approve -var rev=1
+          terraform plan -input=false -var rev=2 -out=tfplan
+          terraform show -json tfplan > plan.json
+
+      - name: planguard
+        id: planguard
+        uses: ./
+        with:
+          plan-json: examples/plan.json
+          config: examples/.planguard.yml
+          fail-on: none # the demo is risky on purpose; real repos keep the default (high)
+
+      - name: Check the action's outputs
+        working-directory: .
+        env:
+          RISK: ${{ steps.planguard.outputs.risk }}
+          HEADLINE: ${{ steps.planguard.outputs.headline }}
+        run: |
+          echo "risk=${RISK} headline=${HEADLINE}"
+          test "${RISK}" = "CRITICAL"

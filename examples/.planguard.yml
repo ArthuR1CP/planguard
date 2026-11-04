@@ -1,0 +1,30 @@
+# Example planguard config. Every key is optional.
+
+# Exit non-zero when overall risk >= this level (low|medium|high|critical|none).
+# The demo uses `none` so CI stays green while still posting the report.
+fail_on: none
+
+thresholds:
+  max_deletes: 5          # PG004 fires above this many deletes + replaces
+
+# Added to the built-in lists (globs allowed). For the demo, local files act
+# as "databases" and null resources as "servers".
+stateful_types:
+  - local_file
+compute_types:
+  - null_resource
+
+# Resource addresses to skip entirely (globs).
+ignore:
+  - "module.sandbox.*"
+
+# Changes to resources with these tags are flagged (PG006). "*" matches any value.
+protected_tags:
+  planguard:protected: "true"
+
+# Ports that may be open to 0.0.0.0/0 without a finding (PG003).
+public_ports: [80, 443]
+
+# Disable a rule (off) or change its risk level.
+rules:
+  PG007: low
