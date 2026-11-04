@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="922" height="838" viewBox="0 0 922 838" role="img" aria-label="planguard terminal output">
+  <rect width="922" height="838" rx="10" fill="#0d1117"/>
+  <rect x="0.5" y="0.5" width="921" height="837" rx="10" fill="none" stroke="#30363d"/>
+  <circle cx="22" cy="22" r="6" fill="#ff5f57"/><circle cx="42" cy="22" r="6" fill="#febc2e"/><circle cx="62" cy="22" r="6" fill="#28c840"/>
+  <text x="461.0" y="27" fill="#8b949e" font-size="12" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">planguard: bash</text>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="14">
+    <text x="22" y="64"><tspan fill="#3fb950">$</tspan> <tspan fill="#e6edf3">planguard analyze plan.json</tspan></text>
+    <text x="22" y="85"><tspan fill="#e6edf3" font-weight="700">planguard</tspan><tspan fill="#e6edf3"> </tspan><tspan fill="#8b949e">v1.1.0</tspan><tspan fill="#e6edf3">  risk: </tspan><tspan fill="#ff7b72" font-weight="700">CRITICAL</tspan></text>
+    <text x="22" y="106"><tspan fill="#e6edf3" font-weight="700">🚨 1 cache cluster will be REPLACED; 1 bucket will be DESTROYED</tspan></text>
+    <text x="22" y="127"></text>
+    <text x="22" y="148"><tspan fill="#e6edf3">Plan: </tspan><tspan fill="#3fb950">3 to add</tspan><tspan fill="#e6edf3">, </tspan><tspan fill="#d29922">2 to change</tspan><tspan fill="#e6edf3">, </tspan><tspan fill="#ff7b72">2 to replace</tspan><tspan fill="#e6edf3">, </tspan><tspan fill="#ff7b72">2 to destroy</tspan></text>
+    <text x="22" y="169"></text>
+    <text x="22" y="190"><tspan fill="#e6edf3" font-weight="700">Findings (6)</tspan></text>
+    <text x="22" y="211"><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72" font-weight="700">CRITICAL</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">module.cache.aws_elasticache_replication_group.this</tspan></text>
+    <text x="22" y="232"><tspan fill="#e6edf3">            Will be REPLACED (forces replacement: at_rest_encryption_enabled)  </tspan><tspan fill="#8b949e">[PG001 stateful-destroy]</tspan></text>
+    <text x="22" y="253"><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72" font-weight="700">CRITICAL</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">module.sandbox.aws_s3_bucket.scratch</tspan></text>
+    <text x="22" y="274"><tspan fill="#e6edf3">            Will be DESTROYED  </tspan><tspan fill="#8b949e">[PG001 stateful-destroy]</tspan></text>
+    <text x="22" y="295"><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72">HIGH    </tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">aws_security_group_rule.ssh</tspan></text>
+    <text x="22" y="316"><tspan fill="#e6edf3">            Opens port 22/tcp to 0.0.0.0/0  </tspan><tspan fill="#8b949e">[PG003 sg-open-world]</tspan></text>
+    <text x="22" y="337"><tspan fill="#e6edf3">  </tspan><tspan fill="#d29922">MEDIUM  </tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">aws_iam_role_policy.logs</tspan></text>
+    <text x="22" y="358"><tspan fill="#e6edf3">            Grants access to all resources (#0: Resource *)  </tspan><tspan fill="#8b949e">[PG002 iam-wildcard]</tspan></text>
+    <text x="22" y="379"><tspan fill="#e6edf3">  </tspan><tspan fill="#d29922">MEDIUM  </tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">aws_instance.web[0]</tspan></text>
+    <text x="22" y="400"><tspan fill="#e6edf3">            Will be REPLACED (forces replacement: ami)  </tspan><tspan fill="#8b949e">[PG005 compute-replace]</tspan></text>
+    <text x="22" y="421"><tspan fill="#e6edf3">  </tspan><tspan fill="#d29922">MEDIUM  </tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">aws_lb.public</tspan></text>
+    <text x="22" y="442"><tspan fill="#e6edf3">            Protected resource (planguard:protected=true) will be modified  </tspan><tspan fill="#8b949e">[PG006 protected-tag]</tspan></text>
+    <text x="22" y="463"></text>
+    <text x="22" y="484"><tspan fill="#e6edf3" font-weight="700">Notes (2)</tspan></text>
+    <text x="22" y="505"><tspan fill="#e6edf3">  </tspan><tspan fill="#8b949e">·</tspan><tspan fill="#e6edf3"> aws_instance.web[0] replacement forced by ami</tspan></text>
+    <text x="22" y="526"><tspan fill="#e6edf3">  </tspan><tspan fill="#8b949e">·</tspan><tspan fill="#e6edf3"> module.cache.aws_elasticache_replication_group.this replacement forced by at_rest_encryption_enabled</tspan></text>
+    <text x="22" y="547"></text>
+    <text x="22" y="568"><tspan fill="#e6edf3" font-weight="700">Changes (9)</tspan></text>
+    <text x="22" y="589"><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72">-/+</tspan><tspan fill="#e6edf3">  module.cache.aws_elasticache_replication_group.this  </tspan><tspan fill="#8b949e">aws_elasticache_replication_group</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72" font-weight="700">CRITICAL</tspan></text>
+    <text x="22" y="610"><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72">  -</tspan><tspan fill="#e6edf3">  module.sandbox.aws_s3_bucket.scratch                 </tspan><tspan fill="#8b949e">aws_s3_bucket                    </tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72" font-weight="700">CRITICAL</tspan></text>
+    <text x="22" y="631"><tspan fill="#e6edf3">  </tspan><tspan fill="#3fb950">  +</tspan><tspan fill="#e6edf3">  aws_security_group_rule.ssh                          </tspan><tspan fill="#8b949e">aws_security_group_rule          </tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72">HIGH</tspan></text>
+    <text x="22" y="652"><tspan fill="#e6edf3">  </tspan><tspan fill="#3fb950">  +</tspan><tspan fill="#e6edf3">  aws_iam_role_policy.logs                             </tspan><tspan fill="#8b949e">aws_iam_role_policy              </tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#d29922">MEDIUM</tspan></text>
+    <text x="22" y="673"><tspan fill="#e6edf3">  </tspan><tspan fill="#d29922">  ~</tspan><tspan fill="#e6edf3">  aws_lb.public                                        </tspan><tspan fill="#8b949e">aws_lb                           </tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#d29922">MEDIUM</tspan></text>
+    <text x="22" y="694"><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72">-/+</tspan><tspan fill="#e6edf3">  aws_instance.web[0]                                  </tspan><tspan fill="#8b949e">aws_instance                     </tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#d29922">MEDIUM</tspan></text>
+    <text x="22" y="715"><tspan fill="#e6edf3">  </tspan><tspan fill="#3fb950">  +</tspan><tspan fill="#e6edf3">  aws_s3_bucket.assets                                 </tspan><tspan fill="#8b949e">aws_s3_bucket                    </tspan></text>
+    <text x="22" y="736"><tspan fill="#e6edf3">  </tspan><tspan fill="#d29922">  ~</tspan><tspan fill="#e6edf3">  aws_instance.web[1]                                  </tspan><tspan fill="#8b949e">aws_instance                     </tspan></text>
+    <text x="22" y="757"><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72">  -</tspan><tspan fill="#e6edf3">  aws_cloudwatch_log_group.old                         </tspan><tspan fill="#8b949e">aws_cloudwatch_log_group         </tspan></text>
+    <text x="22" y="778"></text>
+    <text x="22" y="799"><tspan fill="#ff7b72" font-weight="700">✗ FAIL</tspan><tspan fill="#e6edf3">  risk CRITICAL ≥ fail-on HIGH</tspan></text>
+  </g>
+</svg>

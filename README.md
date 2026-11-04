@@ -1,41 +1,47 @@
-# 🛡️ planguard
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="planguard: catch destructive Terraform changes before they merge" width="820">
+</p>
 
-[![ci](https://github.com/ArthuR1CP/planguard/actions/workflows/ci.yml/badge.svg)](https://github.com/ArthuR1CP/planguard/actions/workflows/ci.yml)
-[![demo](https://github.com/ArthuR1CP/planguard/actions/workflows/demo.yml/badge.svg)](https://github.com/ArthuR1CP/planguard/actions/workflows/demo.yml)
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/ArthuR1CP/planguard/actions/workflows/ci.yml"><img src="https://github.com/ArthuR1CP/planguard/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/ArthuR1CP/planguard/actions/workflows/demo.yml"><img src="https://github.com/ArthuR1CP/planguard/actions/workflows/demo.yml/badge.svg" alt="Demo"></a>
+  <a href="https://github.com/ArthuR1CP/planguard/releases/latest"><img src="https://img.shields.io/github/v/release/ArthuR1CP/planguard?color=f0602b&label=release" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12-3776ab?logo=python&logoColor=white" alt="Python 3.11 | 3.12">
+  <img src="https://img.shields.io/badge/terraform-%E2%89%A5%201.5-7b42bc?logo=terraform&logoColor=white" alt="Terraform >= 1.5">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2ea043" alt="MIT license"></a>
+</p>
 
-**planguard reads your `terraform plan` and posts one clear PR comment when it would destroy a database, open SSH to the world, or grant `"*"` in IAM, before anyone clicks merge.**
+<p align="center">
+  <b>planguard reads your <code>terraform plan</code> and tells reviewers, in one PR comment,<br>
+  when a change would destroy a database, open SSH to the world, or grant <code>"*"</code> in IAM.</b>
+</p>
 
-## The problem
+<p align="center">
+  <a href="#-quickstart">Quickstart</a> ·
+  <a href="#-how-it-works">How it works</a> ·
+  <a href="#-rules">Rules</a> ·
+  <a href="#%EF%B8%8F-configuration">Configuration</a> ·
+  <a href="#%EF%B8%8F-cli">CLI</a> ·
+  <a href="#-how-is-this-different-from-checkov--tfsec--infracost">Why not Checkov?</a>
+</p>
 
-A one-line change like `storage_encrypted = true` looks harmless in a diff. Terraform's plan says `-/+ must be replaced`, buried on line 412 of a CI log nobody reads. The PR gets approved, and the production database is recreated empty.
+---
 
-planguard reads the plan JSON and turns it into a comment reviewers can't miss:
+## 💥 The problem
 
-> ## 🛡️ planguard: 🔴 CRITICAL
->
-> ### 🚨 1 database will be REPLACED
->
-> **Plan:** ➕ 0 to add · ✏️ 1 to change · ♻️ 1 to replace · 🗑️ 0 to destroy
->
-> | Risk | Resource | Rule | Why |
-> |---|---|---|---|
-> | 🔴 **CRITICAL** | `aws_db_instance.main` | PG001 stateful-destroy | Will be REPLACED (forces replacement: `storage_encrypted`) |
->
-> <details><summary>All changes (2)</summary>
->
-> | Action | Resource | Type | Risk |
-> |---|---|---|---|
-> | ♻️ replace | `aws_db_instance.main` | `aws_db_instance` | 🔴 CRITICAL |
-> | ✏️ update | `aws_db_parameter_group.main` | `aws_db_parameter_group` |  |
->
-> </details>
->
-> <sub>❌ failing · fail-on: `high` · planguard v1.0.0</sub>
+A one-line change like `storage_encrypted = true` looks harmless in a diff. Terraform's plan says `-/+ must be replaced`, buried on line 412 of a CI log nobody reads. The PR gets approved, and the production database is **recreated empty**.
 
-The comment is **sticky**: each new push updates the same comment instead of adding another one. The same report goes to the job summary, and the step fails when the risk is at or above your `fail-on` level.
+planguard turns the plan into a comment reviewers can't miss:
 
-## Quickstart (GitHub Actions)
+<p align="center">
+  <img src="docs/assets/pr-comment.png" alt="planguard PR comment showing a CRITICAL risk: a cache cluster will be replaced and a bucket destroyed" width="880">
+</p>
+
+- **One sticky comment.** Every push updates the same comment instead of adding a new one.
+- **Fails the check** when the risk is at or above your `fail-on` level (default `high`).
+- **Job summary.** The same report also appears on the workflow run page.
+
+## 🚀 Quickstart
 
 ```yaml
 # .github/workflows/terraform.yml
@@ -53,9 +59,11 @@ jobs:
         with: { plan-json: plan.json, fail-on: high }
 ```
 
-Set `terraform_wrapper: false`, because the wrapper adds extra text to stdout and the JSON stops being valid.
+> [!IMPORTANT]
+> Set `terraform_wrapper: false`. The wrapper adds extra text to stdout, and the result is no longer valid JSON.
 
-### Action inputs and outputs
+<details>
+<summary><b>Action inputs and outputs</b></summary>
 
 | Input | Default | Description |
 |---|---|---|
@@ -65,64 +73,50 @@ Set `terraform_wrapper: false`, because the wrapper adds extra text to stdout an
 | `comment` | `true` | Create/update the sticky PR comment |
 | `github-token` | `${{ github.token }}` | Needs `pull-requests: write` |
 
-Outputs: `risk`, `failed`, `headline`, `report-markdown`, `report-json`.
+| Output | Example |
+|---|---|
+| `risk` | `CRITICAL` |
+| `failed` | `true` |
+| `headline` | `🚨 1 database will be REPLACED` |
+| `report-markdown` / `report-json` | paths to the generated reports |
 
-On PRs from forks the token is read-only. The comment step then logs a warning and doesn't fail; the job summary still shows the report.
+On PRs from forks the token is read-only. The comment step then logs a warning instead of failing, and the job summary still shows the report.
 
-## CLI
+</details>
 
-```bash
-pip install git+https://github.com/ArthuR1CP/planguard@v1
-terraform show -json tfplan > plan.json
-planguard analyze plan.json                     # colored summary in a terminal, Markdown when piped
-planguard analyze plan.json --format md         # force Markdown (e.g. to paste into a PR)
-planguard analyze plan.json --format json       # machine-readable
-planguard analyze plan.json --fail-on critical --config .planguard.yml
-planguard analyze - < plan.json                 # stdin
-planguard rules                                 # list rules
+## 🔍 How it works
+
+```mermaid
+flowchart LR
+    A["terraform plan<br/>-out=tfplan"] --> B["terraform show -json<br/>plan.json"]
+    B --> C{"planguard<br/>7 rules + .planguard.yml"}
+    C --> D["💬 Sticky PR comment"]
+    C --> E["📋 Job summary"]
+    C --> F["🖥️ Terminal / JSON"]
+    C --> G["✅ / ❌ exit code"]
 ```
 
-In a terminal you get a compact, colored view using Terraform's own `+ ~ -/+ -` symbols:
+planguard reads `resource_changes` from the plan and classifies each change as create, update, delete, replace or no-op. It then runs every rule against the change and its `before` and `after` values. The overall risk is the highest-risk finding.
 
-```text
-planguard v1.1.0  risk: CRITICAL
-🚨 1 database will be REPLACED
+## 📏 Rules
 
-Plan: 0 to add, 1 to change, 1 to replace, 0 to destroy
-
-Findings (1)
-  CRITICAL  aws_db_instance.main
-            Will be REPLACED (forces replacement: storage_encrypted)  [PG001 stateful-destroy]
-
-Changes (2)
-  -/+  aws_db_instance.main         aws_db_instance         CRITICAL
-    ~  aws_db_parameter_group.main  aws_db_parameter_group
-
-✗ FAIL  risk CRITICAL ≥ fail-on HIGH
-```
-
-Colors follow [`NO_COLOR`](https://no-color.org) / `FORCE_COLOR`, or pass `--no-color`.
-Exit codes: `0` ok · `1` risk ≥ `fail-on` · `2` invalid input or config.
-`--output report.md` and `--json-output report.json` write both formats in a single run.
-
-## Rules
-
-| ID | Name | Risk | Fires on |
+| ID | Rule | Risk | Fires on |
 |---|---|---|---|
-| PG001 | `stateful-destroy` | 🔴 CRITICAL | Delete or replace of stateful resources: RDS/Aurora, DynamoDB, S3, EFS/EBS/FSx, ElastiCache, OpenSearch, Redshift, KMS keys, Cloud SQL, GCS, BigQuery, Spanner, Azure SQL/Postgres/MySQL/Cosmos, storage accounts, Key Vault and others |
-| PG002 | `iam-wildcard` | 🟠 HIGH | Allow statements with `Action: "*"` / `"svc:*"` / `NotAction`, or an `AdministratorAccess` attachment. Downgraded to 🟡 MEDIUM when only `Resource: "*"` is present |
-| PG003 | `sg-open-world` | 🟠 HIGH | Ingress from `0.0.0.0/0` or `::/0` on any port other than 80/443 (AWS SG / SG rules / VPC ingress rules, GCP firewalls, Azure NSG rules) |
-| PG004 | `mass-delete` | 🟠 HIGH | More than `max_deletes` (default 5) resources destroyed or replaced in a single plan |
+| PG001 | `stateful-destroy` | 🔴 CRITICAL | Delete or replace of stateful resources: RDS/Aurora, DynamoDB, S3, EFS/EBS/FSx, ElastiCache, OpenSearch, Redshift, KMS, Cloud SQL, GCS, BigQuery, Spanner, Azure SQL/Postgres/MySQL/Cosmos, storage accounts, Key Vault and others |
+| PG002 | `iam-wildcard` | 🟠 HIGH | Allow statements with `Action: "*"`, `"svc:*"` or `NotAction`, or an `AdministratorAccess` attachment. Only 🟡 MEDIUM when the sole wildcard is `Resource: "*"` |
+| PG003 | `sg-open-world` | 🟠 HIGH | Ingress from `0.0.0.0/0` or `::/0` on ports other than 80/443 (AWS security groups and their rules, GCP firewalls, Azure NSGs) |
+| PG004 | `mass-delete` | 🟠 HIGH | More than `max_deletes` (default 5) resources destroyed or replaced in one plan |
 | PG005 | `compute-replace` | 🟡 MEDIUM | Replacement of instances, launch templates, ASGs, EKS/GKE/AKS clusters and node pools, VMs |
 | PG006 | `protected-tag` | 🟡 MEDIUM | Change to a resource tagged `planguard:protected=true` (🟠 HIGH if destroyed or replaced) |
 | PG007 | `forces-replacement` | 🟢 LOW | Lists the attributes forcing each replacement (from Terraform's `replace_paths`) |
 
-The overall risk is the highest-risk finding. A plan with changes but no findings is LOW; an empty plan is NONE.
-PG002 and PG003 report only grants or exposures **introduced** by the plan. An existing wildcard policy whose tags change is not reported again.
+> [!NOTE]
+> PG002 and PG003 report only grants or exposures **introduced** by the plan. A tag change on an existing wildcard policy is not reported again.
+> A plan with changes but no findings is `LOW`; an empty plan is `NONE`.
 
-## Configuration
+## ⚙️ Configuration
 
-Add an optional `.planguard.yml` at the repo root. Every key is optional:
+Every key in `.planguard.yml` is optional:
 
 ```yaml
 fail_on: high                  # low | medium | high | critical | none
@@ -134,7 +128,6 @@ stateful_types:                # added to the built-in list, globs allowed
 compute_types: [aws_batch_compute_environment]
 ignore:                        # resource address globs, skipped entirely
   - "module.sandbox.*"
-  - "aws_cloudwatch_log_group.tmp_*"
 protected_tags:                # PG006; "*" matches any value
   planguard:protected: "true"
   criticality: "*"
@@ -144,19 +137,59 @@ rules:                         # turn a rule off or change its level
   PG002: critical
 ```
 
-Unknown keys cause an error (exit 2), so typos don't get ignored silently. The CLI flag `--fail-on` (or the action input) overrides `fail_on`.
+Unknown keys cause an error (exit 2), so typos don't get ignored silently. The `--fail-on` flag and the action input override `fail_on`.
 
-## How is this different from Checkov / tfsec / Trivy / Infracost?
+## 🖥️ CLI
 
-| Tool | Answers |
+The GitHub Action is a thin wrapper around a CLI that also runs locally, or in GitLab CI, Jenkins or a pre-commit hook.
+
+```bash
+pip install git+https://github.com/ArthuR1CP/planguard@v1
+
+terraform plan -out=tfplan && terraform show -json tfplan > plan.json
+planguard analyze plan.json
+```
+
+<p align="center">
+  <img src="docs/assets/terminal.svg" alt="planguard colored terminal output" width="820">
+</p>
+
+| Command | What it does |
 |---|---|
-| Checkov, tfsec, Trivy, KICS | *Is this configuration secure?* Static analysis of `.tf` files against hundreds of policies |
+| `planguard analyze plan.json` | Colored summary in a terminal, Markdown when piped |
+| `planguard analyze plan.json -f md` | Markdown, e.g. to paste into a PR |
+| `planguard analyze plan.json -f json` | Machine-readable report |
+| `planguard analyze plan.json --fail-on critical -c .planguard.yml` | Custom threshold and config |
+| `planguard analyze - < plan.json` | Read the plan from stdin |
+| `planguard rules` | List the built-in rules |
+
+**Exit codes:** `0` OK · `1` risk ≥ `fail-on` · `2` invalid input or config.
+Colors follow [`NO_COLOR`](https://no-color.org) and `FORCE_COLOR`, or pass `--no-color`. `--output` and `--json-output` write both formats in a single run.
+
+## 🤔 How is this different from Checkov / tfsec / Infracost?
+
+| Tool | Question it answers |
+|---|---|
+| Checkov, tfsec, Trivy, KICS | *Is this configuration secure?* Static analysis of `.tf` files |
 | Infracost | *How much will this cost?* |
 | **planguard** | ***What does this plan destroy, and how bad is it?*** The blast radius of one specific change |
 
-planguard looks at the **diff** (the plan), not the code. It knows that `storage_encrypted = true` on an existing RDS instance means *data loss*, even though the setting itself passes every security scanner. Use it **next to** your scanner, not instead of it. It has one dependency (PyYAML), runs in about a second, and needs no API key or account.
+planguard looks at the **diff** (the plan), not at the code. It knows that `storage_encrypted = true` on an existing RDS instance means data loss, even though the setting itself passes every security scanner. Run it **next to** your scanner, not instead of it.
 
-## Development
+**Lightweight:** one dependency (PyYAML), no API keys, no account, and it runs in about a second.
+
+## 🗺️ Roadmap
+
+- [ ] **OpenTofu:** test against `tofu show -json` and document it (the format is already compatible)
+- [ ] **Pulumi:** support `pulumi preview --json`
+- [ ] **Optional LLM summary:** a plain-English "what this PR really does" (opt-in, bring your own key)
+- [ ] `moved`/`removed` block awareness, so planned refactors don't trigger PG004
+- [ ] SARIF output for GitHub code scanning
+- [ ] PyPI release
+
+Ideas and bug reports are welcome. Open an [issue](https://github.com/ArthuR1CP/planguard/issues).
+
+## 🛠️ Development
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
@@ -164,17 +197,8 @@ pip install -e ".[dev]"
 pytest && ruff check . && ruff format --check .
 ```
 
-The [`demo`](.github/workflows/demo.yml) workflow dogfoods the action. It runs a real `terraform plan` on [`examples/`](examples) (only the `null` and `local` providers, no cloud credentials needed) and runs `uses: ./` on the result.
+The [`demo`](.github/workflows/demo.yml) workflow dogfoods the action. It runs a real `terraform plan` on [`examples/`](examples) (only the `null` and `local` providers, so no cloud credentials are needed) and calls `uses: ./` on the result. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a rule.
 
-## Roadmap
+## 📄 License
 
-- [ ] OpenTofu: test against `tofu show -json` and document it (the format is compatible today)
-- [ ] Pulumi: support `pulumi preview --json`
-- [ ] Optional LLM summary: a plain-English "what this PR really does" paragraph (opt-in, bring your own key)
-- [ ] `moved`/`removed` block awareness, so planned refactors don't trigger PG004
-- [ ] SARIF output for GitHub code scanning
-- [ ] PyPI release
-
-## License
-
-[MIT](LICENSE)
+[MIT](LICENSE) © ArthuR1CP

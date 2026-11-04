@@ -25,3 +25,13 @@ pytest && ruff check . && ruff format --check .
 - Core logic uses only the standard library; PyYAML is the only dependency.
 - Rules should report changes **introduced by the plan**, not things that already exist.
 - Keep messages short and concrete: what happens, to which resource, and why.
+
+## README images
+
+`docs/assets/terminal.svg` is generated from real output. After changing the
+terminal view, regenerate it with:
+
+```bash
+FORCE_COLOR=1 planguard analyze tests/fixtures/mixed.json -f text \
+  | python scripts/render_terminal_svg.py "planguard analyze plan.json" > docs/assets/terminal.svg
+```
