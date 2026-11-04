@@ -74,13 +74,34 @@ On PRs from forks the token is read-only. The comment step then logs a warning a
 ```bash
 pip install git+https://github.com/ArthuR1CP/planguard@v1
 terraform show -json tfplan > plan.json
-planguard analyze plan.json                     # Markdown to stdout
+planguard analyze plan.json                     # colored summary in a terminal, Markdown when piped
+planguard analyze plan.json --format md         # force Markdown (e.g. to paste into a PR)
 planguard analyze plan.json --format json       # machine-readable
 planguard analyze plan.json --fail-on critical --config .planguard.yml
 planguard analyze - < plan.json                 # stdin
 planguard rules                                 # list rules
 ```
 
+In a terminal you get a compact, colored view using Terraform's own `+ ~ -/+ -` symbols:
+
+```text
+planguard v1.0.0  risk: CRITICAL
+🚨 1 database will be REPLACED
+
+Plan: 0 to add, 1 to change, 1 to replace, 0 to destroy
+
+Findings (1)
+  CRITICAL  aws_db_instance.main
+            Will be REPLACED (forces replacement: storage_encrypted)  [PG001 stateful-destroy]
+
+Changes (2)
+  -/+  aws_db_instance.main         aws_db_instance         CRITICAL
+    ~  aws_db_parameter_group.main  aws_db_parameter_group
+
+✗ FAIL  risk CRITICAL ≥ fail-on HIGH
+```
+
+Colors follow [`NO_COLOR`](https://no-color.org) / `FORCE_COLOR`, or pass `--no-color`.
 Exit codes: `0` ok · `1` risk ≥ `fail-on` · `2` invalid input or config.
 `--output report.md` and `--json-output report.json` write both formats in a single run.
 

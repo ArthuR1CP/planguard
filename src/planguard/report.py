@@ -1,4 +1,4 @@
-"""Build the analysis report and render it as Markdown or JSON."""
+"""Build the analysis report and render it as Markdown or JSON (see terminal.py for text)."""
 
 from __future__ import annotations
 
@@ -151,11 +151,28 @@ def _cell(text: str) -> str:
     return text.replace("|", "\\|").replace("\n", " ")
 
 
-def _why(finding: Finding) -> str:
-    """The finding message without the address, which already has its own column."""
+def why(finding: Finding) -> str:
+    """The finding message without the address, which is shown in its own column."""
     text = finding.message.replace(f"`{finding.address}` ", "", 1)
     text = text.replace(f" `{finding.address}`", "", 1)
     return text[:1].upper() + text[1:]
+
+
+def sorted_changes(report: Report) -> tuple[list[ResourceChange], dict[str, Risk]]:
+    """Real changes (no no-ops), riskiest first, plus the highest risk per address."""
+    risk_by_address: dict[str, Risk] = {}
+    for f in report.findings:
+        risk_by_address[f.address] = max(risk_by_address.get(f.address, Risk.NONE), f.risk)
+    order = {a: i for i, a in enumerate(_ACTION_ORDER)}
+    changed = [ch for ch in report.changes if ch.action not in (Action.NOOP, Action.READ)]
+    changed.sort(
+        key=lambda ch: (
+            -risk_by_address.get(ch.address, Risk.NONE),
+            order.get(ch.action, 99),
+            ch.address,
+        )
+    )
+    return changed, risk_by_address
 
 
 def render_markdown(report: Report) -> str:
@@ -181,7 +198,7 @@ def render_markdown(report: Report) -> str:
         for f in risky:
             lines.append(
                 f"| {f.risk.emoji} **{f.risk.name}** | `{_cell(f.address)}` "
-                f"| {f.rule_id} {f.rule_name} | {_cell(_why(f))} |"
+                f"| {f.rule_id} {f.rule_name} | {_cell(why(f))} |"
             )
         lines.append("")
     if info:
@@ -189,19 +206,8 @@ def render_markdown(report: Report) -> str:
         lines += [f"- {_cell(f.message)}" for f in info]
         lines += ["", "</details>", ""]
 
-    changed = [ch for ch in report.changes if ch.action not in (Action.NOOP, Action.READ)]
+    changed, risk_by_address = sorted_changes(report)
     if changed:
-        risk_by_address: dict[str, Risk] = {}
-        for f in report.findings:
-            risk_by_address[f.address] = max(risk_by_address.get(f.address, Risk.NONE), f.risk)
-        order = {a: i for i, a in enumerate(_ACTION_ORDER)}
-        changed.sort(
-            key=lambda ch: (
-                -risk_by_address.get(ch.address, Risk.NONE),
-                order.get(ch.action, 99),
-                ch.address,
-            )
-        )
         lines += [
             f"<details><summary>All changes ({len(changed)})</summary>",
             "",
