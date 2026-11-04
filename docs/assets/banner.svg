@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="220" viewBox="0 0 880 220" role="img" aria-label="planguard: catch destructive Terraform changes before merge">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffa657"/>
+      <stop offset="1" stop-color="#f0602b"/>
+    </linearGradient>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" fill="none" stroke="#21262d" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="880" height="220" rx="16" fill="url(#bg)"/>
+  <rect width="880" height="220" rx="16" fill="url(#grid)" opacity="0.6"/>
+  <rect x="0.5" y="0.5" width="879" height="219" rx="16" fill="none" stroke="#30363d"/>
+
+  <!-- shield -->
+  <g transform="translate(70 42)">
+    <path d="M68 0 L132 22 V70 C132 108 104 128 68 140 C32 128 4 108 4 70 V22 Z" fill="url(#shield)"/>
+    <path d="M68 12 L120 30 V70 C120 100 98 117 68 127 C38 117 16 100 16 70 V30 Z" fill="#0d1117" opacity="0.18"/>
+    <!-- plan lines -->
+    <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="15" font-weight="700">
+      <text x="34" y="56" fill="#ffffff">+</text>
+      <rect x="50" y="46" width="50" height="6" rx="3" fill="#ffffff" opacity="0.9"/>
+      <text x="34" y="80" fill="#ffffff">~</text>
+      <rect x="50" y="70" width="38" height="6" rx="3" fill="#ffffff" opacity="0.9"/>
+      <text x="26" y="104" fill="#ffffff">-/+</text>
+      <rect x="58" y="94" width="44" height="6" rx="3" fill="#ffffff"/>
+    </g>
+  </g>
+
+  <text x="240" y="104" fill="#e6edf3" font-family="-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="58" font-weight="800" letter-spacing="-1.5">planguard</text>
+  <text x="242" y="142" fill="#8b949e" font-family="-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20">Catch destructive Terraform changes before they merge.</text>
+
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13">
+    <rect x="242" y="160" width="132" height="26" rx="13" fill="#3d1214" stroke="#f85149" stroke-opacity="0.5"/>
+    <text x="308" y="177" fill="#ff7b72" text-anchor="middle">DB replaced</text>
+    <rect x="384" y="160" width="132" height="26" rx="13" fill="#3a2a0b" stroke="#d29922" stroke-opacity="0.5"/>
+    <text x="450" y="177" fill="#e3b341" text-anchor="middle">IAM "*"</text>
+    <rect x="526" y="160" width="160" height="26" rx="13" fill="#3a2a0b" stroke="#d29922" stroke-opacity="0.5"/>
+    <text x="606" y="177" fill="#e3b341" text-anchor="middle">:22 → 0.0.0.0/0</text>
+    <rect x="696" y="160" width="132" height="26" rx="13" fill="#0f2d1a" stroke="#3fb950" stroke-opacity="0.5"/>
+    <text x="762" y="177" fill="#3fb950" text-anchor="middle">safe → pass</text>
+  </g>
+</svg>
