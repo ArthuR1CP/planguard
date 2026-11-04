@@ -85,7 +85,7 @@ planguard rules                                 # list rules
 In a terminal you get a compact, colored view using Terraform's own `+ ~ -/+ -` symbols:
 
 ```text
-planguard v1.0.0  risk: CRITICAL
+planguard v1.1.0  risk: CRITICAL
 🚨 1 database will be REPLACED
 
 Plan: 0 to add, 1 to change, 1 to replace, 0 to destroy
