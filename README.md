@@ -45,8 +45,8 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with: { terraform_wrapper: false }
       - run: terraform init && terraform plan -out=tfplan && terraform show -json tfplan > plan.json
       - uses: ArthuR1CP/planguard@v1
