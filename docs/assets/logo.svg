@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="planguard logo">
+  <defs>
+    <linearGradient id="pg-shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffa657"/>
+      <stop offset="1" stop-color="#f0602b"/>
+    </linearGradient>
+    <linearGradient id="pg-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#161b22"/>
+      <stop offset="1" stop-color="#0d1117"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#pg-bg)"/>
+  <rect x="2" y="2" width="508" height="508" rx="110" fill="none" stroke="#30363d" stroke-width="4"/>
+  <g transform="translate(256 256) scale(1.12) translate(-256 -238)">
+  <!-- shield -->
+  <path d="M256 84 L392 130 V236 C392 318 334 364 256 392 C178 364 120 318 120 236 V130 Z" fill="url(#pg-shield)"/>
+  <path d="M256 110 L368 148 V236 C368 302 322 340 256 364 C190 340 144 302 144 236 V148 Z" fill="#0d1117" opacity="0.16"/>
+  <!-- plan symbols: + ~ -/+ -->
+  <g fill="#ffffff" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="800" font-size="34">
+    <text x="174" y="206">+</text>
+    <rect x="206" y="186" width="118" height="18" rx="9"/>
+    <text x="174" y="256">~</text>
+    <rect x="206" y="236" width="86" height="18" rx="9"/>
+    <text x="158" y="306">-/+</text>
+    <rect x="226" y="286" width="98" height="18" rx="9"/>
+  </g>
+  </g>
+</svg>
