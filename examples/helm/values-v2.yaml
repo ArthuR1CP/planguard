@@ -1,0 +1,18 @@
+# A "small" values change that is actually dangerous. planguard should catch all of it.
+web:
+  serviceType: LoadBalancer      # PG103: public load balancer
+  debugSidecar: true             # PG106: privileged container
+worker:
+  replicas: 0                    # PG105: scaled to zero
+db:
+  storageClass: io2              # PG102: volumeClaimTemplates is immutable
+cache:
+  enabled: false                 # PG101: PVC deleted (and it was protected: PG006)
+ingress:
+  hosts:
+    - shop.internal.example.com
+    - shop.example.com           # PG103: new public host
+rbac:
+  clusterAdmin: true             # PG104: binds cluster-admin
+pdb:
+  enabled: false                 # PG105: PodDisruptionBudget removed

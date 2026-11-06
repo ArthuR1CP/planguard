@@ -1,0 +1,151 @@
+---
+# Source: shop/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: shop-web
+  labels:
+    app.kubernetes.io/name: shop
+    app.kubernetes.io/instance: shop
+    helm.sh/chart: shop-0.1.0
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {app: web}
+---
+# Source: shop/templates/rbac.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: shop-ops
+  labels:
+    app.kubernetes.io/name: shop
+    app.kubernetes.io/instance: shop
+    helm.sh/chart: shop-0.1.0
+---
+# Source: shop/templates/db.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shop-cache
+  labels:
+    app.kubernetes.io/name: shop
+    app.kubernetes.io/instance: shop
+    helm.sh/chart: shop-0.1.0
+    planguard/protected: "true"
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Source: shop/templates/web.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-web
+  labels:
+    app.kubernetes.io/name: shop
+    app.kubernetes.io/instance: shop
+    helm.sh/chart: shop-0.1.0
+spec:
+  type: ClusterIP
+  selector: {app: web}
+  ports: [{port: 80, targetPort: 80}]
+---
+# Source: shop/templates/web.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-web
+  labels:
+    app.kubernetes.io/name: shop
+    app.kubernetes.io/instance: shop
+    helm.sh/chart: shop-0.1.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: web}
+  template:
+    metadata:
+      labels: {app: web}
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27
+          ports: [{containerPort: 80}]
+---
+# Source: shop/templates/worker.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-worker
+  labels:
+    app.kubernetes.io/name: shop
+    app.kubernetes.io/instance: shop
+    helm.sh/chart: shop-0.1.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: worker}
+  template:
+    metadata:
+      labels: {app: worker}
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.36
+          command: ["sh", "-c", "while true; do echo working; sleep 30; done"]
+---
+# Source: shop/templates/db.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: shop-db
+  labels:
+    app.kubernetes.io/name: shop
+    app.kubernetes.io/instance: shop
+    helm.sh/chart: shop-0.1.0
+spec:
+  serviceName: shop-db
+  replicas: 1
+  selector:
+    matchLabels: {app: db}
+  template:
+    metadata:
+      labels: {app: db}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 20Gi
+---
+# Source: shop/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shop-web
+  labels:
+    app.kubernetes.io/name: shop
+    app.kubernetes.io/instance: shop
+    helm.sh/chart: shop-0.1.0
+spec:
+  rules:
+    - host: shop.internal.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: shop-web
+                port: {number: 80}

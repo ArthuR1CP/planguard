@@ -44,3 +44,6 @@ jobs:
           if planguard analyze tests/fixtures/rds_replace.json > /dev/null; then
             echo "expected exit 1 for a CRITICAL plan"; exit 1
           fi
+          if planguard k8s tests/fixtures/k8s/helm_shop_v1.yaml tests/fixtures/k8s/helm_shop_v2.yaml > /dev/null; then
+            echo "expected exit 1 for a CRITICAL manifest diff"; exit 1
+          fi

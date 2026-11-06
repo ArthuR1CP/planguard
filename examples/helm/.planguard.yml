@@ -1,0 +1,2 @@
+# The demo is risky on purpose; real repos keep the default (high).
+fail_on: none

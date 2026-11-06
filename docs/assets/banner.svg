@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="880" height="220" viewBox="0 0 880 220" role="img" aria-label="planguard: catch destructive Terraform changes before merge">
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="220" viewBox="0 0 880 220" role="img" aria-label="planguard: catch destructive infrastructure changes before merge">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0d1117"/>
@@ -32,16 +32,16 @@
   </g>
 
   <text x="240" y="104" fill="#e6edf3" font-family="-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="58" font-weight="800" letter-spacing="-1.5">planguard</text>
-  <text x="242" y="142" fill="#8b949e" font-family="-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20">Catch destructive Terraform changes before they merge.</text>
+  <text x="242" y="142" fill="#8b949e" font-family="-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="20">Catch destructive infrastructure changes before they merge.</text>
 
   <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13">
     <rect x="242" y="160" width="132" height="26" rx="13" fill="#3d1214" stroke="#f85149" stroke-opacity="0.5"/>
     <text x="308" y="177" fill="#ff7b72" text-anchor="middle">DB replaced</text>
-    <rect x="384" y="160" width="132" height="26" rx="13" fill="#3a2a0b" stroke="#d29922" stroke-opacity="0.5"/>
-    <text x="450" y="177" fill="#e3b341" text-anchor="middle">IAM "*"</text>
+    <rect x="384" y="160" width="132" height="26" rx="13" fill="#3d1214" stroke="#f85149" stroke-opacity="0.5"/>
+    <text x="450" y="177" fill="#ff7b72" text-anchor="middle">PVC deleted</text>
     <rect x="526" y="160" width="160" height="26" rx="13" fill="#3a2a0b" stroke="#d29922" stroke-opacity="0.5"/>
-    <text x="606" y="177" fill="#e3b341" text-anchor="middle">:22 → 0.0.0.0/0</text>
-    <rect x="696" y="160" width="132" height="26" rx="13" fill="#0f2d1a" stroke="#3fb950" stroke-opacity="0.5"/>
-    <text x="762" y="177" fill="#3fb950" text-anchor="middle">safe → pass</text>
+    <text x="606" y="177" fill="#e3b341" text-anchor="middle">IAM "*" · :22 open</text>
+    <rect x="696" y="160" width="150" height="26" rx="13" fill="#0f2d1a" stroke="#3fb950" stroke-opacity="0.5"/>
+    <text x="771" y="177" fill="#3fb950" text-anchor="middle">Terraform · Helm</text>
   </g>
 </svg>

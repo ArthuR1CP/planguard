@@ -3,11 +3,17 @@
 #
 # Usage: sticky_comment.sh <report.md>
 # Env:   GH_TOKEN, GITHUB_REPOSITORY, GITHUB_EVENT_PATH (set by GitHub Actions)
-#        PLANGUARD_MARKER (optional, defaults to the marker planguard writes)
+#        PLANGUARD_COMMENT_ID (optional) keeps one comment per id, so several planguard
+#        jobs in one workflow (e.g. terraform + helm) don't overwrite each other.
 set -euo pipefail
 
 body_file="${1:?usage: sticky_comment.sh <report.md>}"
-marker="${PLANGUARD_MARKER:-<!-- planguard:sticky-comment -->}"
+default_marker="<!-- planguard:sticky-comment -->"
+id_suffix="$(printf '%s' "${PLANGUARD_COMMENT_ID:-}" | tr -cd 'A-Za-z0-9_-')"
+marker="${default_marker}"
+if [[ -n "${id_suffix}" ]]; then
+  marker="<!-- planguard:sticky-comment:${id_suffix} -->"
+fi
 repo="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}"
 
 pr_number="$(jq -r '.pull_request.number // .issue.number // empty' "${GITHUB_EVENT_PATH:?}")"
@@ -16,6 +22,11 @@ if [[ -z "${pr_number}" ]]; then
   exit 0
 fi
 
+if [[ "${marker}" != "${default_marker}" ]]; then
+  # Swap the default marker for the id-specific one, so lookups don't collide.
+  sed "s|${default_marker}|${marker}|" "${body_file}" > "${body_file}.id"
+  body_file="${body_file}.id"
+fi
 if ! grep -qF -- "${marker}" "${body_file}"; then
   # Make sure the comment can be found next time.
   printf '%s\n%s' "${marker}" "$(cat "${body_file}")" > "${body_file}.marked"

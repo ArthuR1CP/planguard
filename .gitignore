@@ -17,3 +17,6 @@ build/
 tfplan
 examples/plan.json
 examples/.out/
+
+# macOS
+.DS_Store
