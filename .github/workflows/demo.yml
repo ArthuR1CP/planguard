@@ -1,4 +1,4 @@
-# Dogfooding: plan the credential-free config in examples/ and run this repo's own action on it.
+# Dogfooding: run this repo's own action on the credential-free examples in examples/.
 name: demo
 
 on:
@@ -38,6 +38,7 @@ jobs:
           plan-json: examples/plan.json
           config: examples/.planguard.yml
           fail-on: none # the demo is risky on purpose; real repos keep the default (high)
+          comment-id: terraform
 
       - name: Check the action's outputs
         working-directory: .
@@ -47,3 +48,43 @@ jobs:
         run: |
           echo "risk=${RISK} headline=${HEADLINE}"
           test "${RISK}" = "CRITICAL"
+
+  helm:
+    runs-on: ubuntu-latest # helm is preinstalled on GitHub-hosted runners
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Render the example chart (values v1 -> v2)
+        run: |
+          helm template shop examples/helm/shop -n shop -f examples/helm/values-v1.yaml > before.yaml
+          helm template shop examples/helm/shop -n shop -f examples/helm/values-v2.yaml > after.yaml
+
+      - name: planguard (manifest mode)
+        id: planguard
+        uses: ./
+        with:
+          k8s-before: before.yaml
+          k8s-after: after.yaml
+          config: examples/helm/.planguard.yml
+          comment-id: helm
+
+      - name: planguard (helm mode, chart vs base commit)
+        id: helm-mode
+        uses: ./
+        with:
+          helm-chart: examples/helm/shop
+          helm-values: examples/helm/values-v1.yaml
+          helm-release: shop
+          helm-namespace: shop
+          fail-on: none
+          comment: "false"
+
+      - name: Check the action's outputs
+        env:
+          RISK: ${{ steps.planguard.outputs.risk }}
+          HEADLINE: ${{ steps.planguard.outputs.headline }}
+          HELM_MODE: ${{ steps.helm-mode.outputs.mode }}
+        run: |
+          echo "risk=${RISK} headline=${HEADLINE} helm-mode=${HELM_MODE}"
+          test "${RISK}" = "CRITICAL"
+          test "${HELM_MODE}" = "k8s"

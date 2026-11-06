@@ -13,10 +13,12 @@ pytest && ruff check . && ruff format --check .
 
 ## Adding or changing a rule
 
-1. Write the rule in `src/planguard/rules.py` with the `@rule(...)` decorator.
-   Pick the next free `PGxxx` id and never reuse an id.
+1. Write the rule with the `@rule(...)` decorator: Terraform rules go in
+   `src/planguard/rules.py` (PG0xx), Kubernetes rules in `src/planguard/k8s_rules.py` (PG1xx).
+   Pick the next free id in that range and never reuse an id.
 2. Add a fixture plan to `tests/fixtures/` if no existing one covers your case.
-   Real `terraform show -json` output is best; scrub account IDs and names first.
+   Real `terraform show -json` or `helm template` output is best (Kubernetes fixtures live
+   in `tests/fixtures/k8s/`); scrub account IDs and names first.
 3. Add tests to `tests/test_rules.py`, then update the rule table in `README.md`
    and add an entry to `CHANGELOG.md`.
 

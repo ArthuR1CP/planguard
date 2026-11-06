@@ -5,7 +5,7 @@
   <text x="461.0" y="27" fill="#8b949e" font-size="12" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">planguard: bash</text>
   <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="14">
     <text x="22" y="64"><tspan fill="#3fb950">$</tspan> <tspan fill="#e6edf3">planguard analyze plan.json</tspan></text>
-    <text x="22" y="85"><tspan fill="#e6edf3" font-weight="700">planguard</tspan><tspan fill="#e6edf3"> </tspan><tspan fill="#8b949e">v1.1.0</tspan><tspan fill="#e6edf3">  risk: </tspan><tspan fill="#ff7b72" font-weight="700">CRITICAL</tspan></text>
+    <text x="22" y="85"><tspan fill="#e6edf3" font-weight="700">planguard</tspan><tspan fill="#e6edf3"> </tspan><tspan fill="#8b949e">v1.2.0</tspan><tspan fill="#e6edf3">  risk: </tspan><tspan fill="#ff7b72" font-weight="700">CRITICAL</tspan></text>
     <text x="22" y="106"><tspan fill="#e6edf3" font-weight="700">🚨 1 cache cluster will be REPLACED; 1 bucket will be DESTROYED</tspan></text>
     <text x="22" y="127"></text>
     <text x="22" y="148"><tspan fill="#e6edf3">Plan: </tspan><tspan fill="#3fb950">3 to add</tspan><tspan fill="#e6edf3">, </tspan><tspan fill="#d29922">2 to change</tspan><tspan fill="#e6edf3">, </tspan><tspan fill="#ff7b72">2 to replace</tspan><tspan fill="#e6edf3">, </tspan><tspan fill="#ff7b72">2 to destroy</tspan></text>

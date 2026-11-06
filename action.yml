@@ -1,14 +1,47 @@
 name: planguard
-description: Flag risky Terraform plan changes (destroyed databases, IAM wildcards, open security groups) in a sticky PR comment.
+description: Catch destructive infrastructure changes before merge. Terraform plans and Kubernetes/Helm manifests, in one sticky PR comment.
 author: ArthuR1CP
 branding:
   icon: shield
   color: orange
 
+# Pick exactly one mode:
+#   Terraform  -> plan-json
+#   Manifests  -> k8s-before + k8s-after (helm template / kustomize build output)
+#   Helm       -> helm-chart (rendered on the PR base and on the PR head, then compared)
 inputs:
   plan-json:
-    description: Path to the JSON plan produced by `terraform show -json tfplan > plan.json`.
-    required: true
+    description: "Terraform mode: path to the JSON plan from `terraform show -json tfplan > plan.json`."
+    required: false
+    default: ""
+  k8s-before:
+    description: "Manifest mode: YAML file or directory with the manifests before the change (/dev/null if none)."
+    required: false
+    default: ""
+  k8s-after:
+    description: "Manifest mode: YAML file or directory with the manifests after the change."
+    required: false
+    default: ""
+  helm-chart:
+    description: "Helm mode: chart directory, relative to the repository root. Requires helm on the runner."
+    required: false
+    default: ""
+  helm-values:
+    description: "Helm mode: values files relative to the repository root, comma or newline separated."
+    required: false
+    default: ""
+  helm-release:
+    description: "Helm mode: release name passed to helm template (default: chart directory name)."
+    required: false
+    default: ""
+  helm-namespace:
+    description: "Helm mode: release namespace (default: default)."
+    required: false
+    default: ""
+  helm-base-ref:
+    description: "Helm mode: git ref to compare against (default: the PR base commit, or the previous commit on push)."
+    required: false
+    default: ""
   config:
     description: Path to a .planguard.yml config. Defaults to ./.planguard.yml when it exists.
     required: false
@@ -21,12 +54,19 @@ inputs:
     description: Create or update a single sticky comment on the pull request.
     required: false
     default: "true"
+  comment-id:
+    description: Keeps a separate sticky comment per id when several planguard steps run on one PR (e.g. terraform and helm).
+    required: false
+    default: ""
   github-token:
     description: "Token used to comment on the PR (needs `pull-requests: write`)."
     required: false
     default: ${{ github.token }}
 
 outputs:
+  mode:
+    description: terraform or k8s.
+    value: ${{ steps.analyze.outputs.mode }}
   risk:
     description: Overall risk (NONE, LOW, MEDIUM, HIGH, CRITICAL).
     value: ${{ steps.analyze.outputs.risk }}
@@ -56,18 +96,62 @@ runs:
         python3 -m venv "${RUNNER_TEMP}/planguard-venv"
         "${RUNNER_TEMP}/planguard-venv/bin/pip" install --quiet --disable-pip-version-check "${ACTION_PATH}"
 
-    - name: Analyze plan
+    - name: Render Helm chart (base and head)
+      id: helm
+      if: inputs.helm-chart != ''
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        CHART: ${{ inputs.helm-chart }}
+        VALUES: ${{ inputs.helm-values }}
+        RELEASE: ${{ inputs.helm-release }}
+        NAMESPACE: ${{ inputs.helm-namespace }}
+        BASE_REF: ${{ inputs.helm-base-ref || github.event.pull_request.base.sha || github.event.before }}
+      run: |
+        set -euo pipefail
+        out="${RUNNER_TEMP}/planguard-helm"
+        bash "${ACTION_PATH}/scripts/helm_render.sh" "${out}"
+        echo "dir=${out}" >> "${GITHUB_OUTPUT}"
+
+    - name: Analyze changes
       id: analyze
       shell: bash
       env:
         PLAN_JSON: ${{ inputs.plan-json }}
+        K8S_BEFORE: ${{ inputs.k8s-before }}
+        K8S_AFTER: ${{ inputs.k8s-after }}
+        HELM_DIR: ${{ steps.helm.outputs.dir }}
         CONFIG: ${{ inputs.config }}
         FAIL_ON: ${{ inputs.fail-on }}
       run: |
         set -uo pipefail
+        modes=0
+        [[ -n "${PLAN_JSON}" ]] && modes=$((modes + 1))
+        [[ -n "${K8S_BEFORE}${K8S_AFTER}" ]] && modes=$((modes + 1))
+        [[ -n "${HELM_DIR}" ]] && modes=$((modes + 1))
+        if [[ ${modes} -ne 1 ]]; then
+          echo "::error title=planguard::set exactly one of: plan-json, k8s-before + k8s-after, helm-chart"
+          exit 2
+        fi
+
+        if [[ -n "${PLAN_JSON}" ]]; then
+          mode=terraform
+          args=(analyze "${PLAN_JSON}")
+        elif [[ -n "${HELM_DIR}" ]]; then
+          mode=k8s
+          args=(k8s "${HELM_DIR}/before.yaml" "${HELM_DIR}/after.yaml")
+        else
+          if [[ -z "${K8S_BEFORE}" || -z "${K8S_AFTER}" ]]; then
+            echo "::error title=planguard::k8s-before and k8s-after must be set together (use /dev/null for 'nothing before')"
+            exit 2
+          fi
+          mode=k8s
+          args=(k8s "${K8S_BEFORE}" "${K8S_AFTER}")
+        fi
+
         out_dir="${RUNNER_TEMP}/planguard"
         mkdir -p "${out_dir}"
-        args=(analyze "${PLAN_JSON}" --output "${out_dir}/report.md" --json-output "${out_dir}/report.json")
+        args+=(--output "${out_dir}/report.md" --json-output "${out_dir}/report.json")
         [[ -n "${CONFIG}" ]] && args+=(--config "${CONFIG}")
         [[ -n "${FAIL_ON}" ]] && args+=(--fail-on "${FAIL_ON}")
 
@@ -82,6 +166,7 @@ runs:
         risk="$(jq -r .risk "${out_dir}/report.json")"
         headline="$(jq -r .headline "${out_dir}/report.json")"
         {
+          echo "mode=${mode}"
           echo "exit-code=${code}"
           echo "risk=${risk}"
           echo "failed=$(jq -r .failed "${out_dir}/report.json")"
@@ -89,7 +174,7 @@ runs:
           echo "report-markdown=${out_dir}/report.md"
           echo "report-json=${out_dir}/report.json"
         } >> "${GITHUB_OUTPUT}"
-        echo "planguard: ${risk}: ${headline}"
+        echo "planguard (${mode}): ${risk}: ${headline}"
 
     - name: Comment on pull request
       if: inputs.comment == 'true' && (github.event_name == 'pull_request' || github.event_name == 'pull_request_target')
@@ -97,6 +182,7 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         REPORT: ${{ steps.analyze.outputs.report-markdown }}
+        PLANGUARD_COMMENT_ID: ${{ inputs.comment-id }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
         bash "${ACTION_PATH}/scripts/sticky_comment.sh" "${REPORT}" \

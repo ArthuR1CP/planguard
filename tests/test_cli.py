@@ -104,3 +104,35 @@ def test_default_format_is_text_on_tty(fixture_path, monkeypatch, capsys):
 def test_text_format_flag(fixture_path, capsys):
     main(["analyze", str(fixture_path("rds_replace")), "-f", "text"])
     assert "✗ FAIL" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------- k8s
+
+
+def test_k8s_command(capsys):
+    k8s = "tests/fixtures/k8s/"
+    code = main(["k8s", k8s + "helm_shop_v1.yaml", k8s + "helm_shop_v2.yaml", "-f", "json"])
+    data = json.loads(capsys.readouterr().out)
+    assert code == 1
+    assert data["risk"] == "CRITICAL"
+    assert data["headline"] == "🚨 1 PersistentVolumeClaim will be DELETED"
+    assert {f["rule_id"] for f in data["findings"]} >= {"PG101", "PG102", "PG103", "PG104"}
+
+
+def test_k8s_new_chart_from_dev_null(capsys):
+    code = main(["k8s", "/dev/null", "tests/fixtures/k8s/helm_shop_v1.yaml", "-f", "json"])
+    data = json.loads(capsys.readouterr().out)
+    # Everything is new; the only finding is the Ingress host that becomes reachable.
+    assert code == 1
+    assert data["summary"]["create"] == 8
+    assert data["risk"] == "HIGH"
+    assert [(f["rule_id"], f["address"]) for f in data["findings"]] == [
+        ("PG103", "Ingress/shop-web")
+    ]
+
+
+def test_k8s_bad_input_exit_2(tmp_path, capsys):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("kind: [oops\n")
+    assert main(["k8s", "/dev/null", str(bad)]) == 2
+    assert "invalid YAML" in capsys.readouterr().err

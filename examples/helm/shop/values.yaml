@@ -1,0 +1,19 @@
+web:
+  replicas: 2
+  image: nginx:1.27
+  serviceType: ClusterIP
+  debugSidecar: false
+worker:
+  replicas: 1
+db:
+  storageClass: gp3
+  size: 20Gi
+cache:
+  enabled: true
+ingress:
+  hosts:
+    - shop.internal.example.com
+rbac:
+  clusterAdmin: false
+pdb:
+  enabled: true

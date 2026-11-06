@@ -14,6 +14,7 @@ _TOP_LEVEL_KEYS = {
     "fail_on",
     "thresholds",
     "stateful_types",
+    "stateful_kinds",
     "compute_types",
     "ignore",
     "protected_tags",
@@ -33,12 +34,17 @@ class Config:
     """Fail when overall risk >= this level. ``None`` never fails."""
     max_deletes: int = 5
     stateful_types: tuple[str, ...] = ()
-    """Extra stateful type globs, added to the built-in list."""
+    """Extra stateful Terraform type globs, added to the built-in list."""
+    stateful_kinds: tuple[str, ...] = ()
+    """Extra stateful Kubernetes kinds (globs), added to the built-in list."""
     compute_types: tuple[str, ...] = ()
     """Extra compute type globs, added to the built-in list."""
     ignore: tuple[str, ...] = ()
     """Resource address globs excluded from analysis."""
-    protected_tags: dict[str, str] = field(default_factory=lambda: {"planguard:protected": "true"})
+    protected_tags: dict[str, str] = field(
+        default_factory=lambda: {"planguard:protected": "true", "planguard/protected": "true"}
+    )
+    """Tags (Terraform) or labels/annotations (Kubernetes) that mark a resource as protected."""
     public_ports: frozenset[int] = frozenset({80, 443})
     rule_overrides: dict[str, Risk | None] = field(default_factory=dict)
     """Per-rule risk override; ``None`` disables the rule."""
@@ -88,7 +94,7 @@ def config_from_dict(data: dict[str, Any] | None) -> Config:
             raise ConfigError("thresholds.max_deletes: expected a non-negative integer")
         kwargs["max_deletes"] = value
 
-    for key in ("stateful_types", "compute_types", "ignore"):
+    for key in ("stateful_types", "stateful_kinds", "compute_types", "ignore"):
         if key in data:
             kwargs[key] = _str_list(data, key)
 

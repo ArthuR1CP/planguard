@@ -125,6 +125,11 @@ def is_compute(rtype: str, cfg: Config) -> bool:
     return matches_any(rtype, COMPUTE_TYPES) or matches_any(rtype, cfg.compute_types)
 
 
+def _terraform(change: ResourceChange) -> bool:
+    """Terraform-only rules skip Kubernetes objects (see k8s_rules.py)."""
+    return change.provider != "kubernetes"
+
+
 def _verb(action: Action) -> str:
     return "REPLACED" if action is Action.REPLACE else "DESTROYED"
 
@@ -202,7 +207,7 @@ def _self(rule_id: str) -> Rule:
     "Delete or replace of a stateful resource (databases, buckets, volumes, keys).",
 )
 def stateful_destroy(change: ResourceChange, cfg: Config) -> Iterator[Finding]:
-    if change.action.destructive and is_stateful(change.type, cfg):
+    if _terraform(change) and change.action.destructive and is_stateful(change.type, cfg):
         yield _self("PG001").finding(
             change.address,
             f"`{change.address}` will be {_verb(change.action)}{_replace_suffix(change)}",
@@ -266,7 +271,11 @@ def _policies(values: dict[str, Any] | None, rtype: str) -> list[Any]:
 )
 def iam_wildcard(change: ResourceChange, cfg: Config) -> Iterator[Finding]:
     me = _self("PG002")
-    if change.action not in (Action.CREATE, Action.UPDATE, Action.REPLACE) or not change.after:
+    if (
+        not _terraform(change)
+        or change.action not in (Action.CREATE, Action.UPDATE, Action.REPLACE)
+        or not change.after
+    ):
         return
 
     if change.type in IAM_ATTACHMENT_TYPES:
@@ -440,7 +449,11 @@ def _exposures(rtype: str, values: dict[str, Any] | None) -> list[_Exposure]:
     "Ingress from 0.0.0.0/0 or ::/0 on ports other than the public ones (80/443 by default).",
 )
 def sg_open_world(change: ResourceChange, cfg: Config) -> Iterator[Finding]:
-    if change.action not in (Action.CREATE, Action.UPDATE, Action.REPLACE):
+    if not _terraform(change) or change.action not in (
+        Action.CREATE,
+        Action.UPDATE,
+        Action.REPLACE,
+    ):
         return
     existing = set(_exposures(change.type, change.before))
     risky = []
@@ -496,7 +509,8 @@ def mass_delete(changes: list[ResourceChange], cfg: Config) -> Iterator[Finding]
 )
 def compute_replace(change: ResourceChange, cfg: Config) -> Iterator[Finding]:
     if (
-        change.action is Action.REPLACE
+        _terraform(change)
+        and change.action is Action.REPLACE
         and is_compute(change.type, cfg)
         and not is_stateful(change.type, cfg)
     ):
@@ -528,7 +542,12 @@ def protected_tag(change: ResourceChange, cfg: Config) -> Iterator[Finding]:
         return
     tag = _protected_tag(change, cfg)
     if tag:
-        verb = _verb(change.action) if change.action.destructive else "modified"
+        if not change.action.destructive:
+            verb = "modified"
+        elif change.provider == "kubernetes":
+            verb = "DELETED" if change.action is Action.DELETE else "RECREATED"
+        else:
+            verb = _verb(change.action)
         yield _self("PG006").finding(
             change.address,
             f"protected resource `{change.address}` ({tag}) will be {verb}",
@@ -601,3 +620,7 @@ def overall_risk(changes: list[ResourceChange], findings: list[Finding]) -> Risk
     if any(c.action not in (Action.NOOP, Action.READ) for c in changes):
         return Risk.LOW
     return Risk.NONE
+
+
+# Kubernetes rules live in their own module but share this registry.
+from planguard import k8s_rules  # noqa: E402, F401

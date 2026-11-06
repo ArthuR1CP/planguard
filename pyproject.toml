@@ -5,13 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "planguard"
 dynamic = ["version"]
-description = "Flag risky Terraform plan changes (destroyed databases, IAM wildcards, open security groups) before they merge."
+description = "Catch destructive infrastructure changes before they merge: Terraform plans and Kubernetes/Helm manifests."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [{ name = "ArthuR1CP" }]
-keywords = ["terraform", "opentofu", "plan", "devops", "github-action", "iac", "risk"]
+keywords = ["terraform", "opentofu", "kubernetes", "helm", "plan", "devops", "github-action", "iac", "risk"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",

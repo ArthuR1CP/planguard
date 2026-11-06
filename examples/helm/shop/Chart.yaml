@@ -1,0 +1,6 @@
+apiVersion: v2
+name: shop
+description: Tiny demo chart used by planguard's demo workflow. Nothing here is deployed.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

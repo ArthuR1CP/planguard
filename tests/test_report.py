@@ -101,3 +101,17 @@ def test_json_output(changes_for):
 
 def test_fail_on_none_never_fails(changes_for):
     assert build(changes_for, "rds_replace", fail_on=None).failed is False
+
+
+def test_headline_kubernetes():
+    from planguard.k8s import diff_manifests, load_manifests
+
+    k8s = "tests/fixtures/k8s/"
+    changes = diff_manifests(
+        load_manifests(k8s + "helm_shop_v1.yaml"), load_manifests(k8s + "helm_shop_v2.yaml")
+    )
+    report = build_report(changes, Config(rule_overrides={"PG101": None, "PG006": None}))
+    assert headline(report) == (
+        "⚠️ 1 RBAC grant with wildcards or cluster-admin; 2 new public endpoints; "
+        "1 object must be recreated (immutable fields)"
+    )

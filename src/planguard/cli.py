@@ -8,9 +8,10 @@ import sys
 from pathlib import Path
 
 from planguard import __version__
-from planguard.config import ConfigError, load_config, parse_fail_on
+from planguard.config import Config, ConfigError, load_config, parse_fail_on
+from planguard.k8s import diff_manifests, load_manifests
 from planguard.parser import PlanError, load_plan, parse_changes
-from planguard.report import build_report, render_json, render_markdown
+from planguard.report import Report, build_report, render_json, render_markdown
 from planguard.rules import RULES
 from planguard.terminal import render_text, use_color
 
@@ -19,51 +20,61 @@ EXIT_RISK = 1
 EXIT_ERROR = 2
 
 
+def _add_report_options(cmd: argparse.ArgumentParser) -> None:
+    cmd.add_argument(
+        "-c", "--config", help="path to .planguard.yml (default: ./.planguard.yml if present)"
+    )
+    cmd.add_argument(
+        "-f",
+        "--format",
+        choices=("text", "md", "json"),
+        help="stdout format (default: text in a terminal, md when piped)",
+    )
+    cmd.add_argument(
+        "--no-color", action="store_true", help="disable colors in text output (or set NO_COLOR)"
+    )
+    cmd.add_argument(
+        "--fail-on",
+        metavar="LEVEL",
+        help="exit 1 when risk >= LEVEL: low|medium|high|critical|none (default: high)",
+    )
+    cmd.add_argument("--output", metavar="FILE", help="also write the Markdown report to FILE")
+    cmd.add_argument("--json-output", metavar="FILE", help="also write the JSON report to FILE")
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="planguard",
-        description="Flag risky changes in a Terraform plan before merge.",
+        description="Flag destructive infrastructure changes (Terraform plans, Kubernetes/Helm "
+        "manifests) before they merge. Exit codes: 0 ok, 1 risk >= fail-on, 2 error.",
     )
     parser.add_argument("--version", action="version", version=f"planguard {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     analyze = sub.add_parser(
         "analyze",
-        help="analyze a JSON plan (from `terraform show -json tfplan`)",
-        description="Analyze a JSON plan. Exit codes: 0 ok, 1 risk >= fail-on, 2 error.",
+        help="analyze a Terraform JSON plan (from `terraform show -json tfplan`)",
+        description="Analyze a Terraform JSON plan. Exit codes: 0 ok, 1 risk >= fail-on, 2 error.",
     )
     analyze.add_argument("plan", help="path to the JSON plan, or '-' for stdin")
-    analyze.add_argument(
-        "-c", "--config", help="path to .planguard.yml (default: ./.planguard.yml if present)"
+    _add_report_options(analyze)
+
+    k8s = sub.add_parser(
+        "k8s",
+        help="compare two sets of Kubernetes manifests (helm template, kustomize build, YAML)",
+        description="Compare rendered Kubernetes manifests before and after a change. "
+        "Each side is a YAML file (multi-document is fine) or a directory of YAML files; "
+        "use /dev/null for 'nothing existed'. Exit codes: 0 ok, 1 risk >= fail-on, 2 error.",
     )
-    analyze.add_argument(
-        "-f",
-        "--format",
-        choices=("text", "md", "json"),
-        help="stdout format (default: text in a terminal, md when piped)",
-    )
-    analyze.add_argument(
-        "--no-color", action="store_true", help="disable colors in text output (or set NO_COLOR)"
-    )
-    analyze.add_argument(
-        "--fail-on",
-        metavar="LEVEL",
-        help="exit 1 when risk >= LEVEL: low|medium|high|critical|none (default: high)",
-    )
-    analyze.add_argument("--output", metavar="FILE", help="also write the Markdown report to FILE")
-    analyze.add_argument("--json-output", metavar="FILE", help="also write the JSON report to FILE")
+    k8s.add_argument("before", help="manifests before the change (file, directory or /dev/null)")
+    k8s.add_argument("after", help="manifests after the change (file, directory or /dev/null)")
+    _add_report_options(k8s)
 
     sub.add_parser("rules", help="list built-in rules")
     return parser
 
 
-def _analyze(args: argparse.Namespace) -> int:
-    cfg = load_config(args.config)
-    if args.fail_on:
-        cfg = dataclasses.replace(cfg, fail_on=parse_fail_on(args.fail_on))
-    plan = load_plan(sys.stdin if args.plan == "-" else args.plan)
-    report = build_report(parse_changes(plan), cfg)
-
+def _emit(report: Report, args: argparse.Namespace) -> int:
     markdown = render_markdown(report)
     as_json = render_json(report)
     if args.output:
@@ -80,6 +91,25 @@ def _analyze(args: argparse.Namespace) -> int:
     return EXIT_RISK if report.failed else EXIT_OK
 
 
+def _config(args: argparse.Namespace) -> Config:
+    cfg = load_config(args.config)
+    if args.fail_on:
+        cfg = dataclasses.replace(cfg, fail_on=parse_fail_on(args.fail_on))
+    return cfg
+
+
+def _analyze(args: argparse.Namespace) -> int:
+    cfg = _config(args)
+    plan = load_plan(sys.stdin if args.plan == "-" else args.plan)
+    return _emit(build_report(parse_changes(plan), cfg), args)
+
+
+def _k8s(args: argparse.Namespace) -> int:
+    cfg = _config(args)
+    changes = diff_manifests(load_manifests(args.before), load_manifests(args.after))
+    return _emit(build_report(changes, cfg), args)
+
+
 def _rules() -> int:
     width = max(len(r.name) for r in RULES)
     for r in RULES:
@@ -92,6 +122,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "rules":
             return _rules()
+        if args.command == "k8s":
+            return _k8s(args)
         return _analyze(args)
     except (PlanError, ConfigError) as exc:
         print(f"planguard: error: {exc}", file=sys.stderr)

@@ -1,3 +1,3 @@
-"""planguard: flag risky Terraform plan changes before they merge."""
+"""planguard: catch destructive infrastructure changes (Terraform, Kubernetes/Helm) before merge."""
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"

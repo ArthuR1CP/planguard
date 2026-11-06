@@ -129,12 +129,24 @@ def headline(report: Report) -> str:
             groups[(singular, plural, verb)] += 1
         for (singular, plural, verb), n in groups.items():
             parts.append(f"{_plural(n, singular, plural)} will be {verb}")
+    if "PG101" in by_rule:
+        kinds: Counter[tuple[str, str]] = Counter()
+        for f in by_rule.pop("PG101"):
+            verb = "DELETED" if f.details.get("action") == Action.DELETE.value else "RECREATED"
+            kinds[(str(f.details.get("kind", "resource")), verb)] += 1
+        for (kind, verb), n in kinds.items():
+            parts.append(f"{_plural(n, kind)} will be {verb}")
     phrases = {
         "PG002": lambda n: f"{_plural(n, 'IAM grant')} with wildcard permissions",
         "PG003": lambda n: f"{_plural(n, 'security rule')} open to the internet",
         "PG004": lambda _n: by_rule["PG004"][0].message,
         "PG005": lambda n: f"{_plural(n, 'compute resource')} will be REPLACED",
         "PG006": lambda n: f"{_plural(n, 'protected resource')} will change",
+        "PG102": lambda n: f"{_plural(n, 'object')} must be recreated (immutable fields)",
+        "PG103": lambda n: f"{_plural(n, 'new public endpoint')}",
+        "PG104": lambda n: f"{_plural(n, 'RBAC grant')} with wildcards or cluster-admin",
+        "PG105": lambda n: f"{_plural(n, 'capacity drop')}",
+        "PG106": lambda n: f"{_plural(n, 'pod spec')} gaining host or privileged access",
     }
     for rule_id, items in by_rule.items():
         phrase = phrases.get(rule_id)
