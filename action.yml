@@ -1,5 +1,5 @@
-name: planguard
-description: Catch destructive infrastructure changes before merge. Terraform plans and Kubernetes/Helm manifests, in one sticky PR comment.
+name: planguard - Terraform & Helm risk check
+description: Flag destructive Terraform and Kubernetes/Helm changes before merge, in one sticky PR comment.
 author: ArthuR1CP
 branding:
   icon: shield
