@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.3.0] - 2026-11-08
 
 ### Changed
 - Replacements with `create_before_destroy` are now recognised. PG005 (`compute-replace`)
@@ -55,6 +55,7 @@ All notable changes to this project are documented here. The format follows
   updated through `gh api`), and outputs `risk`, `failed`, `headline`.
 - Dogfooding `demo` workflow that runs a real Terraform plan from `examples/`.
 
+[1.3.0]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.2.0
 [1.1.0]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.1.0
 [1.0.0]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.0.0
