@@ -134,13 +134,16 @@ def _verb(action: Action) -> str:
     return "REPLACED" if action is Action.REPLACE else "DESTROYED"
 
 
-def _replace_suffix(change: ResourceChange) -> str:
+def _replace_suffix(change: ResourceChange, cbd_note: str = "create before destroy") -> str:
+    parts: list[str] = []
+    if change.action is Action.REPLACE and change.create_before_destroy:
+        parts.append(cbd_note)
     attrs = change.replace_attributes
     if attrs:
-        return " (forces replacement: " + ", ".join(f"`{a}`" for a in attrs) + ")"
-    if change.action_reason == "replace_by_request":
-        return " (replacement requested with -replace)"
-    return ""
+        parts.append("forces replacement: " + ", ".join(f"`{a}`" for a in attrs))
+    elif change.action_reason == "replace_by_request":
+        parts.append("replacement requested with -replace")
+    return f" ({'; '.join(parts)})" if parts else ""
 
 
 # --------------------------------------------------------------------------- rule registry
@@ -210,9 +213,15 @@ def stateful_destroy(change: ResourceChange, cfg: Config) -> Iterator[Finding]:
     if _terraform(change) and change.action.destructive and is_stateful(change.type, cfg):
         yield _self("PG001").finding(
             change.address,
-            f"`{change.address}` will be {_verb(change.action)}{_replace_suffix(change)}",
+            f"`{change.address}` will be {_verb(change.action)}"
+            + _replace_suffix(
+                change,
+                cbd_note="create before destroy: no downtime, but the new one starts empty "
+                "and the old one is still destroyed",
+            ),
             action=change.action.value,
             forces_replacement=change.replace_attributes,
+            create_before_destroy=change.create_before_destroy,
         )
 
 
@@ -505,7 +514,8 @@ def mass_delete(changes: list[ResourceChange], cfg: Config) -> Iterator[Finding]
     "PG005",
     "compute-replace",
     Risk.MEDIUM,
-    "Replacement of compute (instances, launch templates, node groups, clusters).",
+    "Replacement of compute (instances, launch templates, node groups, clusters). "
+    "LOW when the new one is created before the old one is destroyed.",
 )
 def compute_replace(change: ResourceChange, cfg: Config) -> Iterator[Finding]:
     if (
@@ -517,7 +527,9 @@ def compute_replace(change: ResourceChange, cfg: Config) -> Iterator[Finding]:
         yield _self("PG005").finding(
             change.address,
             f"`{change.address}` will be REPLACED{_replace_suffix(change)}",
+            risk=Risk.LOW if change.create_before_destroy else None,
             forces_replacement=change.replace_attributes,
+            create_before_destroy=change.create_before_destroy,
         )
 
 

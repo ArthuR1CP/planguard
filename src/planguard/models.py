@@ -65,6 +65,8 @@ class ResourceChange:
     replace_paths: tuple[tuple[str | int, ...], ...] = ()
     action_reason: str | None = None
     tags: dict[str, str] = field(default_factory=dict)
+    create_before_destroy: bool = False
+    """True for a replace where the new object is created before the old one is destroyed."""
 
     @property
     def replace_attributes(self) -> list[str]:

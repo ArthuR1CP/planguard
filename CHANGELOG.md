@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Replacements with `create_before_destroy` are now recognised. PG005 (`compute-replace`)
+  drops to LOW for them, since the new instance is up before the old one goes away.
+  PG001 stays CRITICAL and says why: the new database or bucket still starts empty.
+- The change list shows `replace (create first)`, and the JSON report has a
+  `create_before_destroy` field on each change and on PG001/PG005 findings.
+
 ## [1.2.0] - 2026-11-05
 
 ### Added
