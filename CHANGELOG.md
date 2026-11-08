@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] - 2026-11-09
+
+### Changed
+- Action metadata renamed to "planguard - Terraform & Helm risk check" with a shorter
+  description, so it can be listed on GitHub Marketplace. `uses: ArthuR1CP/planguard@v1`
+  is unchanged.
+
 ## [1.3.0] - 2026-11-08
 
 ### Changed
@@ -55,6 +62,7 @@ All notable changes to this project are documented here. The format follows
   updated through `gh api`), and outputs `risk`, `failed`, `headline`.
 - Dogfooding `demo` workflow that runs a real Terraform plan from `examples/`.
 
+[1.3.1]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.3.1
 [1.3.0]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.2.0
 [1.1.0]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.1.0
