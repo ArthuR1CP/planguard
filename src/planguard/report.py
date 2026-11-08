@@ -187,6 +187,12 @@ def sorted_changes(report: Report) -> tuple[list[ResourceChange], dict[str, Risk
     return changed, risk_by_address
 
 
+def _action_label(change: ResourceChange) -> str:
+    if change.action is Action.REPLACE and change.create_before_destroy:
+        return "replace (create first)"
+    return change.action.value
+
+
 def render_markdown(report: Report) -> str:
     lines: list[str] = [
         MARKER,
@@ -230,7 +236,7 @@ def render_markdown(report: Report) -> str:
             risk = risk_by_address.get(ch.address)
             risk_cell = f"{risk.emoji} {risk.name}" if risk else ""
             lines.append(
-                f"| {_ACTION_ICON[ch.action]} {ch.action.value} | `{_cell(ch.address)}` "
+                f"| {_ACTION_ICON[ch.action]} {_action_label(ch)} | `{_cell(ch.address)}` "
                 f"| `{ch.type}` | {risk_cell} |"
             )
         if len(changed) > MAX_CHANGE_ROWS:
@@ -281,6 +287,7 @@ def to_dict(report: Report) -> dict[str, Any]:
                 "type": ch.type,
                 "action": ch.action.value,
                 "forces_replacement": ch.replace_attributes,
+                "create_before_destroy": ch.create_before_destroy,
             }
             for ch in report.changes
             if ch.action is not Action.NOOP

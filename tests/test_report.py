@@ -48,7 +48,11 @@ def test_markdown_structure(changes_for):
     assert md.startswith(MARKER)
     assert "## 🛡️ planguard: 🔴 CRITICAL" in md
     assert "### 🚨 1 cache cluster will be REPLACED" in md
-    assert "| Will be REPLACED (forces replacement: `at_rest_encryption_enabled`) |" in md
+    assert (
+        "| Will be REPLACED (create before destroy: no downtime, but the new one starts empty "
+        "and the old one is still destroyed; forces replacement: `at_rest_encryption_enabled`) |"
+    ) in md
+    assert "| ♻️ replace (create first) | `module.cache.aws_elasticache_replication_group" in md
     assert "| 🔴 **CRITICAL** | `module.cache.aws_elasticache_replication_group.this`" in md
     assert "<details><summary>All changes (" in md
     assert "Ignored by config (1)" in md
@@ -91,8 +95,13 @@ def test_json_output(changes_for):
         "message": (
             "`aws_db_instance.main` will be REPLACED (forces replacement: `storage_encrypted`)"
         ),
-        "details": {"action": "replace", "forces_replacement": ["storage_encrypted"]},
+        "details": {
+            "action": "replace",
+            "forces_replacement": ["storage_encrypted"],
+            "create_before_destroy": False,
+        },
     }
+    assert all(c["create_before_destroy"] is False for c in data["changes"])
     assert {c["address"] for c in data["changes"]} == {
         "aws_db_instance.main",
         "aws_db_parameter_group.main",

@@ -142,7 +142,7 @@ For Terraform, planguard reads `resource_changes` from the plan. For Kubernetes,
 | PG002 | `iam-wildcard` | 🟠 HIGH | Allow statements with `Action: "*"`, `"svc:*"` or `NotAction`, or an `AdministratorAccess` attachment. Only 🟡 MEDIUM when the sole wildcard is `Resource: "*"` |
 | PG003 | `sg-open-world` | 🟠 HIGH | Ingress from `0.0.0.0/0` or `::/0` on ports other than 80/443 (AWS security groups and their rules, GCP firewalls, Azure NSGs) |
 | PG004 | `mass-delete` | 🟠 HIGH | More than `max_deletes` (default 5) resources destroyed or replaced in one plan |
-| PG005 | `compute-replace` | 🟡 MEDIUM | Replacement of instances, launch templates, ASGs, EKS/GKE/AKS clusters and node pools, VMs |
+| PG005 | `compute-replace` | 🟡 MEDIUM | Replacement of instances, launch templates, ASGs, EKS/GKE/AKS clusters and node pools, VMs. Only 🟢 LOW with `create_before_destroy` (new one is up before the old one goes away) |
 | PG006 | `protected-tag` | 🟡 MEDIUM | Change to a resource tagged `planguard:protected=true` (🟠 HIGH if destroyed or replaced) |
 | PG007 | `forces-replacement` | 🟢 LOW | Lists the attributes forcing each replacement (from Terraform's `replace_paths`) |
 
@@ -162,6 +162,7 @@ PG004 (`mass-delete`) and PG006 (`protected`) apply to both. In Kubernetes, mark
 > [!NOTE]
 > Security rules (PG002, PG003, PG103, PG104, PG106) report only what the change **introduces**. A tag change on an existing wildcard policy is not reported again.
 > A plan with changes but no findings is `LOW`; an empty plan is `NONE`.
+> `create_before_destroy` lowers PG005 but not PG001: it avoids downtime, but a replaced database or bucket still starts empty and the old one is still destroyed.
 
 ## ⚙️ Configuration
 

@@ -95,6 +95,7 @@ def parse_changes(plan: dict[str, Any]) -> list[ResourceChange]:
             raise PlanError(f"resource change is missing {exc.args[0]!r}") from None
         before = change.get("before")
         after = change.get("after")
+        actions = change.get("actions") or ["no-op"]
         replace_paths = tuple(
             tuple(p) for p in (change.get("replace_paths") or []) if isinstance(p, list)
         )
@@ -104,12 +105,13 @@ def parse_changes(plan: dict[str, Any]) -> list[ResourceChange]:
                 type=rtype,
                 name=item.get("name", ""),
                 provider=item.get("provider_name", ""),
-                action=classify(change.get("actions") or ["no-op"]),
+                action=classify(actions),
                 before=before if isinstance(before, dict) else None,
                 after=after if isinstance(after, dict) else None,
                 replace_paths=replace_paths,
                 action_reason=item.get("action_reason"),
                 tags=_tags(before, after),
+                create_before_destroy=list(actions) == ["create", "delete"],
             )
         )
     return changes

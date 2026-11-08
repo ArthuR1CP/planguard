@@ -155,6 +155,33 @@ def test_replace_by_request_message():
     assert any("-replace" in f.message for f in findings)
 
 
+def test_create_before_destroy_parsed():
+    plan = make_plan(
+        make_change("aws_instance.a", "aws_instance", ["create", "delete"], {}, {}),
+        make_change("aws_instance.b", "aws_instance", ["delete", "create"], {}, {}),
+    )
+    a, b = parse_changes(plan)
+    assert a.create_before_destroy is True
+    assert b.create_before_destroy is False
+
+
+def test_stateful_create_before_destroy_stays_critical():
+    db = make_change("aws_db_instance.a", "aws_db_instance", ["create", "delete"], {}, {})
+    findings = run(db)
+    pg001 = [f for f in findings if f.rule_id == "PG001"]
+    assert pg001[0].risk is Risk.CRITICAL
+    assert "new one starts empty" in pg001[0].message
+    assert pg001[0].details["create_before_destroy"] is True
+
+
+def test_compute_create_before_destroy_is_low():
+    cbd = run(make_change("aws_instance.a", "aws_instance", ["create", "delete"], {}, {}))
+    plain = run(make_change("aws_instance.a", "aws_instance", ["delete", "create"], {}, {}))
+    assert [f.risk for f in cbd if f.rule_id == "PG005"] == [Risk.LOW]
+    assert [f.risk for f in plain if f.rule_id == "PG005"] == [Risk.MEDIUM]
+    assert "create before destroy" in next(f.message for f in cbd if f.rule_id == "PG005")
+
+
 # ---------------------------------------------------------------- PG002
 
 
