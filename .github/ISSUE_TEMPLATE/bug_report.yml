@@ -1,0 +1,51 @@
+name: 🐛 Bug report
+description: planguard crashed, flagged something wrong, or the Action misbehaved.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Where
+      options:
+        - Terraform plan
+        - Kubernetes manifests
+        - Helm chart (GitHub Action)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: |
+        Command or workflow step, plus a minimal plan JSON or manifest if you can.
+        ⚠️ Remove secrets, account IDs and anything private before pasting.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: planguard output
+      description: The PR comment, terminal output or error message.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: planguard version
+      description: Output of `planguard --version`, or the Action ref you use (e.g. `@v1`).
+      placeholder: planguard 1.3.0
+    validations:
+      required: true
+  - type: input
+    id: tools
+    attributes:
+      label: Terraform / Helm version
+      placeholder: Terraform 1.9.8, Helm 3.16

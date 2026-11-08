@@ -1,0 +1,33 @@
+name: 💡 Feature or new rule
+description: Suggest a new rule, a resource type to cover, or an improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What risky change should planguard catch?
+      description: Describe the situation, ideally one that hurt (or almost hurt) in real life.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      description: Resource types, a snippet of plan JSON or a manifest, what the PR comment should say.
+      render: shell
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Suggested risk level
+      options:
+        - CRITICAL
+        - HIGH
+        - MEDIUM
+        - LOW
+        - Not sure
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to open a PR for this
