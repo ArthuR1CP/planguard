@@ -50,6 +50,10 @@ inputs:
     description: Path to a .planguard.yml config. Defaults to ./.planguard.yml when it exists.
     required: false
     default: ""
+  config-from-base:
+    description: "Read the config from the PR base commit instead of the PR head, so a PR can't loosen its own checks. On other events (e.g. push) the checked-out config is used."
+    required: false
+    default: "false"
   fail-on:
     description: Fail the step when risk >= this level (low|medium|high|critical|none). Overrides the config file; defaults to high.
     required: false
@@ -117,6 +121,19 @@ runs:
         bash "${ACTION_PATH}/scripts/helm_render.sh" "${out}"
         echo "dir=${out}" >> "${GITHUB_OUTPUT}"
 
+    - name: Load config from PR base
+      id: config
+      if: inputs.config-from-base == 'true' && (github.event_name == 'pull_request' || github.event_name == 'pull_request_target')
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        CONFIG: ${{ inputs.config }}
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_REF: ${{ github.event.pull_request.base.sha }}
+      run: |
+        set -euo pipefail
+        bash "${ACTION_PATH}/scripts/base_config.sh" "${RUNNER_TEMP}/planguard-config"
+
     - name: Analyze changes
       id: analyze
       shell: bash
@@ -125,7 +142,7 @@ runs:
         K8S_BEFORE: ${{ inputs.k8s-before }}
         K8S_AFTER: ${{ inputs.k8s-after }}
         HELM_DIR: ${{ steps.helm.outputs.dir }}
-        CONFIG: ${{ inputs.config }}
+        CONFIG: ${{ steps.config.outputs.path || inputs.config }}
         FAIL_ON: ${{ inputs.fail-on }}
         K8S_NAMESPACE: ${{ inputs.k8s-namespace }}
         HELM_NAMESPACE: ${{ inputs.helm-namespace }}

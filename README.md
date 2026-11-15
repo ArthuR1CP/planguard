@@ -102,6 +102,7 @@ Set exactly one mode: `plan-json`, `k8s-before` + `k8s-after`, or `helm-chart`.
 | `helm-base-ref` | PR base commit | Helm: git ref to compare against |
 | `k8s-namespace` | | Manifests: release namespace. Objects that don't set a namespace are treated as being in it. Helm mode always uses `helm-namespace` |
 | `config` | `./.planguard.yml` if present | Config file path |
+| `config-from-base` | `false` | Read the config from the PR base commit on pull request events, so a PR can't loosen its own checks |
 | `fail-on` | `high` (or config) | `low` \| `medium` \| `high` \| `critical` \| `none` |
 | `comment` | `true` | Create/update the sticky PR comment |
 | `comment-id` | | Separate sticky comment per id (e.g. `terraform`, `helm`) |
@@ -193,6 +194,9 @@ rules:                         # turn a rule off or change its level
 ```
 
 Unknown keys cause an error (exit 2), so typos don't get ignored silently. The `--fail-on` flag and the action input override `fail_on`.
+
+> [!IMPORTANT]
+> By default the config is read from the PR head, so a PR could add `ignore: ["*"]` or turn off a rule. Every report therefore lists the settings that weaken the defaults (`fail_on` above `high`, `ignore` patterns, rules turned off or lowered, a higher `max_deletes`, extra `public_ports`, a default protected tag removed). For stricter repos, set `config-from-base: true` in the action: on pull request events the config is then read from the PR base commit, and a changed config only takes effect after merge. Protect the workflow file itself with CODEOWNERS, since a PR can also edit it.
 
 ## 🖥️ CLI
 

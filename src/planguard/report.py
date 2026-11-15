@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from planguard import __version__
-from planguard.config import Config
+from planguard.config import Config, config_warnings
 from planguard.models import Action, Finding, ResourceChange, Risk
 from planguard.rules import RULES, evaluate, overall_risk
 
@@ -63,6 +63,10 @@ class Report:
     @property
     def headline(self) -> str:
         return headline(self)
+
+    @property
+    def config_warnings(self) -> list[str]:
+        return config_warnings(self.config)
 
 
 def build_report(changes: list[ResourceChange], cfg: Config) -> Report:
@@ -208,6 +212,11 @@ def render_markdown(report: Report) -> str:
         + (f" · 🙈 {len(report.ignored)} ignored" if report.ignored else "")
     )
     lines.append("")
+    warnings = report.config_warnings
+    if warnings:
+        lines += ["> [!WARNING]", "> **The planguard config weakens these checks:**"]
+        lines += [f"> - {w}" for w in warnings]
+        lines.append("")
 
     risky = [f for f in report.findings if f.risk > Risk.LOW]
     info = [f for f in report.findings if f.risk <= Risk.LOW]
@@ -280,6 +289,7 @@ def to_dict(report: Report) -> dict[str, Any]:
             "no_op": c[Action.NOOP],
             "ignored": len(report.ignored),
         },
+        "config_warnings": report.config_warnings,
         "findings": [f.to_dict() for f in report.findings],
         "changes": [
             {
