@@ -21,6 +21,16 @@ All notable changes to this project are documented here. The format follows
   is classified as `forget` instead of `delete`: Helm leaves it in the cluster. PG101 reports
   it as a LOW note, and it no longer counts toward PG004.
 
+### Added
+- Reports list config settings that weaken the defaults (`fail_on` above `high`, `ignore`
+  patterns, rules turned off or lowered, a higher `max_deletes`, extra `public_ports`, a
+  default protected tag removed), in a warning block in Markdown, the terminal and
+  `config_warnings` in the JSON report. They don't change the risk or the exit code, and the
+  default config shows nothing.
+- Action input `config-from-base`: read `.planguard.yml` from the PR base commit, so a PR
+  can't loosen its own checks. Applies to pull request events only. Fails with an error when
+  the base commit can't be fetched; uses the built-in defaults when the base has no config.
+
 ## [1.3.1] - 2026-11-09
 
 ### Changed

@@ -80,6 +80,12 @@ def render_text(report: Report, color: bool = False) -> str:
     out.append("Plan: " + ", ".join(summary))
     out.append("")
 
+    warnings = report.config_warnings
+    if warnings:
+        out.append(paint("Config weakens these checks", "bold", "yellow"))
+        out += [f"  {paint('!', 'yellow')} {plain(w)}" for w in warnings]
+        out.append("")
+
     risky = [f for f in report.findings if f.risk > Risk.LOW]
     notes = [f for f in report.findings if f.risk <= Risk.LOW]
     if risky:

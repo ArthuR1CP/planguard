@@ -124,3 +124,73 @@ def test_headline_kubernetes():
         "⚠️ 1 RBAC grant with wildcards or cluster-admin; 2 new public endpoints; "
         "1 object must be recreated (immutable fields)"
     )
+
+
+def test_default_config_has_no_warnings(changes_for):
+    report = build(changes_for, "rds_replace")
+    assert report.config_warnings == []
+    assert "[!WARNING]" not in render_markdown(report)
+    assert json.loads(render_json(report))["config_warnings"] == []
+
+
+def test_weakening_config_is_shown(changes_for):
+    from planguard.config import config_from_dict
+    from planguard.terminal import render_text
+
+    cfg = config_from_dict(
+        {
+            "fail_on": "none",
+            "ignore": ["module.sandbox.*"],
+            "rules": {"PG001": "off", "PG002": "low", "PG005": "critical"},
+            "thresholds": {"max_deletes": 50},
+            "public_ports": [80, 443, 22],
+        }
+    )
+    report = build_report(changes_for("rds_replace"), cfg)
+    assert report.config_warnings == [
+        "`fail_on: none`: this check never fails",
+        "`ignore` skips every resource matching `module.sandbox.*`",
+        "rules turned off: PG001",
+        "PG002 lowered from HIGH to LOW",
+        "PG004 threshold raised to 50 deletes (default 5)",
+        "ports allowed open to the internet besides 80/443: 22",
+    ]
+    md = render_markdown(report)
+    assert "> [!WARNING]" in md
+    assert "> - rules turned off: PG001" in md
+    assert "Config weakens these checks" in render_text(report)
+    # Warnings are informational: they don't change the risk.
+    assert report.risk is Risk.LOW
+
+
+def test_fail_on_critical_is_a_warning():
+    from planguard.config import config_from_dict, config_warnings
+
+    assert config_warnings(config_from_dict({"fail_on": "critical"})) == [
+        "`fail_on: critical`: HIGH findings don't fail the check"
+    ]
+    assert config_warnings(config_from_dict({"fail_on": "medium"})) == []
+
+
+def test_protected_tags_removed_is_a_warning():
+    from planguard.config import config_from_dict, config_warnings
+
+    assert config_warnings(config_from_dict({"protected_tags": {}})) == [
+        "protected tag `planguard:protected: true` (PG006) is not active",
+        "protected tag `planguard/protected: true` (PG006) is not active",
+    ]
+    extended = {"planguard:protected": "true", "planguard/protected": "true", "tier": "*"}
+    assert config_warnings(config_from_dict({"protected_tags": extended})) == []
+
+
+def test_config_warning_text_is_sanitised(changes_for):
+    from planguard.config import config_from_dict
+
+    cfg = config_from_dict({"ignore": ["a\n<!-- hide\n> b `x` | y"]})
+    md = render_markdown(build_report(changes_for("rds_replace"), cfg))
+    block = [line for line in md.splitlines() if line.startswith("> ")]
+    assert (
+        block[-1] == "> - `ignore` skips every resource matching `a &lt;!-- hide &gt; b 'x' \\| y`"
+    )
+    assert "<!-- hide" not in md
+    assert "Risk | Resource" in md  # the findings table is still there

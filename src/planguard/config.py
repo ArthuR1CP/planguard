@@ -153,3 +153,53 @@ def load_config(path: str | Path | None = None) -> Config:
     except yaml.YAMLError as exc:
         raise ConfigError(f"invalid YAML in {path}: {exc}") from None
     return config_from_dict(data)
+
+
+_DEFAULT = Config()
+
+
+def _inline(text: str) -> str:
+    """Make free text from the config safe for one Markdown line inside backticks."""
+    text = " ".join(str(text).split())
+    return text.replace("`", "'").replace("|", "\\|").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def config_warnings(cfg: Config) -> list[str]:
+    """Settings that make planguard report less than its defaults would.
+
+    They are shown in every report, so a pull request that loosens the config (it is read
+    from the PR head) can't do it quietly. Returns ``[]`` for the default config.
+    """
+    from planguard.rules import RULES  # local import: rules depends on config
+
+    out: list[str] = []
+    if cfg.fail_on is None:
+        out.append("`fail_on: none`: this check never fails")
+    elif _DEFAULT.fail_on is not None and cfg.fail_on > _DEFAULT.fail_on:
+        out.append(
+            f"`fail_on: {cfg.fail_on.name.lower()}`: {_DEFAULT.fail_on.name} findings "
+            "don't fail the check"
+        )
+    if cfg.ignore:
+        patterns = ", ".join(f"`{_inline(p)}`" for p in cfg.ignore)
+        out.append(f"`ignore` skips every resource matching {patterns}")
+    defaults = {r.id: r.default_risk for r in RULES}
+    off = sorted(rid for rid, level in cfg.rule_overrides.items() if level is None)
+    if off:
+        out.append(f"rules turned off: {', '.join(off)}")
+    for rid in sorted(cfg.rule_overrides):
+        level = cfg.rule_overrides[rid]
+        if level is not None and level < defaults[rid]:
+            out.append(f"{rid} lowered from {defaults[rid].name} to {level.name}")
+    if cfg.max_deletes > _DEFAULT.max_deletes:
+        out.append(
+            f"PG004 threshold raised to {cfg.max_deletes} deletes (default {_DEFAULT.max_deletes})"
+        )
+    for key, value in _DEFAULT.protected_tags.items():
+        if cfg.protected_tags.get(key) != value:
+            out.append(f"protected tag `{_inline(key)}: {_inline(value)}` (PG006) is not active")
+    extra_ports = sorted(cfg.public_ports - _DEFAULT.public_ports)
+    if extra_ports:
+        ports = ", ".join(str(p) for p in extra_ports)
+        out.append(f"ports allowed open to the internet besides 80/443: {ports}")
+    return out
