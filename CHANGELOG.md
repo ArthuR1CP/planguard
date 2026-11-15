@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- Kubernetes: when the release namespace is known, an object without `metadata.namespace` is
+  paired with the same object in that namespace, so adding an explicit `namespace:` to a
+  template is no longer a delete + create (and a false CRITICAL on PVCs and StatefulSets).
+  Helm mode in the action always passes `helm-namespace`. For manifests, use the new
+  `planguard k8s --namespace` option or `k8s-namespace` input; without it, pairing is
+  unchanged. Displayed addresses are unchanged. Moving an object to another namespace is
+  still a delete + create.
+
 ## [1.3.1] - 2026-11-09
 
 ### Changed

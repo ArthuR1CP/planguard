@@ -68,6 +68,15 @@ def _parser() -> argparse.ArgumentParser:
     )
     k8s.add_argument("before", help="manifests before the change (file, directory or /dev/null)")
     k8s.add_argument("after", help="manifests after the change (file, directory or /dev/null)")
+    k8s.add_argument(
+        "-n",
+        "--namespace",
+        default="",
+        metavar="NAMESPACE",
+        help="release namespace: objects that don't set a namespace are treated as being in it, "
+        "so making it explicit is not a delete + create (default: not set, objects pair only "
+        "when both sides spell the namespace the same way)",
+    )
     _add_report_options(k8s)
 
     sub.add_parser("rules", help="list built-in rules")
@@ -106,7 +115,9 @@ def _analyze(args: argparse.Namespace) -> int:
 
 def _k8s(args: argparse.Namespace) -> int:
     cfg = _config(args)
-    changes = diff_manifests(load_manifests(args.before), load_manifests(args.after))
+    changes = diff_manifests(
+        load_manifests(args.before), load_manifests(args.after), namespace=args.namespace
+    )
     return _emit(build_report(changes, cfg), args)
 
 
