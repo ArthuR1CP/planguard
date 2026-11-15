@@ -100,7 +100,7 @@ Set exactly one mode: `plan-json`, `k8s-before` + `k8s-after`, or `helm-chart`.
 | `helm-values` | | Helm: values files, comma or newline separated |
 | `helm-release` / `helm-namespace` | chart name / `default` | Helm: release name and namespace for `helm template` |
 | `helm-base-ref` | PR base commit | Helm: git ref to compare against |
-| `k8s-namespace` | `helm-namespace`, else `default` | Manifests: namespace of objects that don't set one. Must be where the release is deployed, or a real move to another namespace can be missed |
+| `k8s-namespace` | | Manifests: release namespace. Objects that don't set a namespace are treated as being in it. Helm mode always uses `helm-namespace` |
 | `config` | `./.planguard.yml` if present | Config file path |
 | `fail-on` | `high` (or config) | `low` \| `medium` \| `high` \| `critical` \| `none` |
 | `comment` | `true` | Create/update the sticky PR comment |
@@ -131,7 +131,7 @@ flowchart LR
     C --> G["✅ / ❌ exit code"]
 ```
 
-For Terraform, planguard reads `resource_changes` from the plan. For Kubernetes, it pairs objects by `kind/namespace/name` across the two renders (an object without a namespace is in the release namespace, so making it explicit is not a delete + create), and treats a change to an immutable field (a selector, `volumeClaimTemplates`, a PVC's storage class) as a replacement. Every change is classified as create, update, delete, replace or no-op, and then every rule runs against its `before` and `after` values. The overall risk is the highest-risk finding.
+For Terraform, planguard reads `resource_changes` from the plan. For Kubernetes, it pairs objects by `kind/namespace/name` across the two renders (when the release namespace is known, as in Helm mode or with `--namespace`, an object without a namespace is in it, so making it explicit is not a delete + create), and treats a change to an immutable field (a selector, `volumeClaimTemplates`, a PVC's storage class) as a replacement. Every change is classified as create, update, delete, replace or no-op, and then every rule runs against its `before` and `after` values. The overall risk is the highest-risk finding.
 
 ## 📏 Rules
 
@@ -224,7 +224,7 @@ planguard k8s before.yaml after.yaml
 | `planguard analyze - < plan.json` | Read the plan from stdin |
 | `planguard k8s before.yaml after.yaml` | Compare two renders (files or directories) |
 | `planguard k8s /dev/null after.yaml` | Everything is new, e.g. a first install |
-| `planguard k8s before.yaml after.yaml -n shop` | Objects without a namespace are in `shop` (the release namespace) |
+| `planguard k8s before.yaml after.yaml -n shop` | Objects without a namespace are in `shop` (the release namespace), so making it explicit is not a delete + create |
 | `planguard rules` | List the built-in rules |
 
 **Exit codes:** `0` OK · `1` risk ≥ `fail-on` · `2` invalid input or config.

@@ -23,7 +23,7 @@ inputs:
     required: false
     default: ""
   k8s-namespace:
-    description: "Manifest mode: namespace of objects that don't set one (default: helm-namespace, else default)."
+    description: "Manifest mode: release namespace. Objects that don't set a namespace are treated as being in it. Leave empty (default) if the manifests may be applied to different namespaces."
     required: false
     default: ""
   helm-chart:
@@ -127,7 +127,7 @@ runs:
         HELM_DIR: ${{ steps.helm.outputs.dir }}
         CONFIG: ${{ inputs.config }}
         FAIL_ON: ${{ inputs.fail-on }}
-        K8S_NAMESPACE: ${{ inputs.k8s-namespace || inputs.helm-namespace }}
+        K8S_NAMESPACE: ${{ inputs.k8s-namespace }}
         HELM_NAMESPACE: ${{ inputs.helm-namespace }}
       run: |
         set -uo pipefail
@@ -152,7 +152,8 @@ runs:
             exit 2
           fi
           mode=k8s
-          args=(k8s "${K8S_BEFORE}" "${K8S_AFTER}" --namespace "${K8S_NAMESPACE:-default}")
+          args=(k8s "${K8S_BEFORE}" "${K8S_AFTER}")
+          [[ -n "${K8S_NAMESPACE}" ]] && args+=(--namespace "${K8S_NAMESPACE}")
         fi
 
         out_dir="${RUNNER_TEMP}/planguard"

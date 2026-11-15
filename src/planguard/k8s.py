@@ -13,7 +13,6 @@ from planguard.models import Action, ResourceChange
 from planguard.parser import PlanError
 
 PROVIDER = "kubernetes"
-DEFAULT_NAMESPACE = "default"
 
 CLUSTER_SCOPED_KINDS = frozenset(
     {
@@ -133,11 +132,12 @@ def address(obj: dict[str, Any]) -> str:
     return f"{kind}/{namespace}/{meta['name']}"
 
 
-def pair_key(obj: dict[str, Any], namespace: str = DEFAULT_NAMESPACE) -> tuple[str, str, str]:
+def pair_key(obj: dict[str, Any], namespace: str = "") -> tuple[str, str, str]:
     """``(kind, namespace, name)`` used to match an object across the two renders.
 
-    A missing namespace means the release namespace, which is how Helm and kubectl apply it.
-    Cluster-scoped kinds get an empty namespace.
+    With a release ``namespace``, a missing namespace means that namespace, which is how Helm
+    and kubectl apply it. Without one, a missing namespace stays empty, so an object only pairs
+    with the same spelling on the other side. Cluster-scoped kinds get an empty namespace.
     """
     kind = str(obj["kind"])
     meta = obj.get("metadata") or {}
@@ -149,6 +149,8 @@ def _same(before: dict[str, Any], after: dict[str, Any], namespace: str) -> bool
     """Equal once an explicit release namespace and an implicit one are treated alike."""
     if before == after:
         return True
+    if not namespace:
+        return False
 
     def strip(obj: dict[str, Any]) -> dict[str, Any]:
         meta = obj.get("metadata") or {}
@@ -196,13 +198,15 @@ def immutable_changes(kind: str, before: dict[str, Any], after: dict[str, Any]) 
 def diff_manifests(
     before: list[dict[str, Any]],
     after: list[dict[str, Any]],
-    namespace: str = DEFAULT_NAMESPACE,
+    namespace: str = "",
 ) -> list[ResourceChange]:
     """Pair objects across the two renders and classify each change.
 
-    Objects are paired by kind, name and namespace. An object without a namespace lives in
-    the release ``namespace``, so adding ``metadata.namespace: <release namespace>`` to a
-    template is not a delete + create. Displayed addresses are unchanged (``address()``).
+    Objects are paired by kind, name and namespace. When the release ``namespace`` is given,
+    an object without a namespace lives in it, so adding ``metadata.namespace: <release
+    namespace>`` to a template is not a delete + create. When it is not given (the default),
+    an object without a namespace only pairs with an object without one. Displayed addresses
+    are unchanged (``address()``).
     """
     old = {pair_key(o, namespace): o for o in before}
     new = {pair_key(o, namespace): o for o in after}

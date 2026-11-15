@@ -9,7 +9,7 @@ from pathlib import Path
 
 from planguard import __version__
 from planguard.config import Config, ConfigError, load_config, parse_fail_on
-from planguard.k8s import DEFAULT_NAMESPACE, diff_manifests, load_manifests
+from planguard.k8s import diff_manifests, load_manifests
 from planguard.parser import PlanError, load_plan, parse_changes
 from planguard.report import Report, build_report, render_json, render_markdown
 from planguard.rules import RULES
@@ -71,9 +71,11 @@ def _parser() -> argparse.ArgumentParser:
     k8s.add_argument(
         "-n",
         "--namespace",
-        default=DEFAULT_NAMESPACE,
-        help="namespace of objects that don't set one, i.e. the release namespace "
-        f"(default: {DEFAULT_NAMESPACE})",
+        default="",
+        metavar="NAMESPACE",
+        help="release namespace: objects that don't set a namespace are treated as being in it, "
+        "so making it explicit is not a delete + create (default: not set, objects pair only "
+        "when both sides spell the namespace the same way)",
     )
     _add_report_options(k8s)
 

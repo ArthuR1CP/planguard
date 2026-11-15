@@ -352,22 +352,35 @@ def pvc(name="data", namespace=None, **meta):
 
 
 def test_explicit_release_namespace_is_not_delete_and_create():
-    (change,) = diff_manifests([pvc()], [pvc(namespace="default")])
+    (change,) = diff_manifests([pvc()], [pvc(namespace="default")], namespace="default")
     assert change.action is Action.NOOP
     assert change.address == "PersistentVolumeClaim/default/data"
-    assert run([pvc()], [pvc(namespace="default")]) == []
+    changes = diff_manifests([pvc()], [pvc(namespace="default")], namespace="default")
+    assert evaluate(changes, Config())[2] == []
+
+
+def test_without_release_namespace_pairing_is_unchanged():
+    # No namespace given: the two spellings don't pair, as before (a real move can't hide).
+    actions = sorted(c.action.value for c in diff_manifests([pvc()], [pvc(namespace="default")]))
+    assert actions == ["create", "delete"]
+    assert ("PG101", "PersistentVolumeClaim/data", "CRITICAL") in ids(
+        run([pvc()], [pvc(namespace="default")])
+    )
 
 
 def test_release_namespace_is_configurable():
     (change,) = diff_manifests([pvc()], [pvc(namespace="shop")], namespace="shop")
     assert change.action is Action.NOOP
-    # With the default release namespace, `shop` is a different namespace: a real move.
-    actions = sorted(c.action.value for c in diff_manifests([pvc()], [pvc(namespace="shop")]))
-    assert actions == ["create", "delete"]
+    # With another release namespace, `shop` is a different namespace: a real move.
+    changes = diff_manifests([pvc()], [pvc(namespace="shop")], namespace="default")
+    assert sorted(c.action.value for c in changes) == ["create", "delete"]
 
 
 def test_move_to_other_namespace_is_still_critical():
     findings = run([pvc()], [pvc(namespace="other")])
+    assert ("PG101", "PersistentVolumeClaim/data", "CRITICAL") in ids(findings)
+    changes = diff_manifests([pvc()], [pvc(namespace="other")], namespace="default")
+    findings = evaluate(changes, Config())[2]
     assert ("PG101", "PersistentVolumeClaim/data", "CRITICAL") in ids(findings)
 
 
@@ -375,7 +388,7 @@ def test_explicit_namespace_with_real_change_is_update():
     before = deploy()
     after = deploy(replicas=3)
     after["metadata"]["namespace"] = "default"
-    (change,) = diff_manifests([before], [after])
+    (change,) = diff_manifests([before], [after], namespace="default")
     assert change.action is Action.UPDATE
 
 
@@ -391,3 +404,4 @@ def test_cli_namespace_option(tmp_path):
     a, b = str(tmp_path / "a.yaml"), str(tmp_path / "b.yaml")
     assert main(["k8s", a, b, "-f", "json"]) == 1
     assert main(["k8s", a, b, "-f", "json", "--namespace", "shop"]) == 0
+    assert main(["k8s", a, b, "-f", "json", "--namespace", "other"]) == 1
