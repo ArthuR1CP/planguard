@@ -161,6 +161,25 @@ def _same(before: dict[str, Any], after: dict[str, Any], namespace: str) -> bool
     return strip(before) == strip(after)
 
 
+def _annotations(obj: dict[str, Any] | None) -> dict[str, Any]:
+    values = ((obj or {}).get("metadata") or {}).get("annotations")
+    return values if isinstance(values, dict) else {}
+
+
+def is_helm_hook(obj: dict[str, Any] | None) -> bool:
+    """True for Helm hook objects (``helm.sh/hook``), which Helm recreates on each release."""
+    return bool(str(_annotations(obj).get("helm.sh/hook") or "").strip())
+
+
+def has_keep_policy(obj: dict[str, Any] | None) -> bool:
+    return str(_annotations(obj).get("helm.sh/resource-policy", "")).strip().lower() == "keep"
+
+
+def helm_leaves_in_cluster(obj: dict[str, Any] | None) -> bool:
+    """True when Helm doesn't delete the object after it's removed from the chart."""
+    return has_keep_policy(obj) or is_helm_hook(obj)
+
+
 def get_path(obj: dict[str, Any] | None, path: tuple[str, ...]) -> Any:
     cur: Any = obj
     for part in path:
@@ -207,6 +226,11 @@ def diff_manifests(
     namespace>`` to a template is not a delete + create. When it is not given (the default),
     an object without a namespace only pairs with an object without one. Displayed addresses
     are unchanged (``address()``).
+
+    Helm specifics: a hook (``helm.sh/hook`` on both sides) is recreated on every release,
+    so its immutable fields don't force a replacement; an object removed from the chart that
+    carries ``helm.sh/resource-policy: keep``, or a removed hook, is left in the cluster
+    by Helm, so it is classified as ``forget`` instead of ``delete``.
     """
     old = {pair_key(o, namespace): o for o in before}
     new = {pair_key(o, namespace): o for o in after}
@@ -221,11 +245,13 @@ def diff_manifests(
         if b is None:
             action = Action.CREATE
         elif a is None:
-            action = Action.DELETE
+            action = Action.FORGET if helm_leaves_in_cluster(b) else Action.DELETE
         elif _same(b, a, namespace):
             action = Action.NOOP
         else:
-            replace_paths = immutable_changes(kind, b, a)
+            # Both sides: a PR must not be able to skip the check by adding the annotation.
+            if not (is_helm_hook(b) and is_helm_hook(a)):
+                replace_paths = immutable_changes(kind, b, a)
             action = Action.REPLACE if replace_paths else Action.UPDATE
         changes.append(
             ResourceChange(

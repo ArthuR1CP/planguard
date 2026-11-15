@@ -405,3 +405,70 @@ def test_cli_namespace_option(tmp_path):
     assert main(["k8s", a, b, "-f", "json"]) == 1
     assert main(["k8s", a, b, "-f", "json", "--namespace", "shop"]) == 0
     assert main(["k8s", a, b, "-f", "json", "--namespace", "other"]) == 1
+
+
+# ---------------------------------------------------------------- helm hooks / keep
+
+
+def job(image="app:1", annotations=None):
+    return obj(
+        "Job",
+        "migrate",
+        api="batch/v1",
+        spec={"template": {"spec": {"containers": [{"name": "m", "image": image}]}}},
+        **({"annotations": annotations} if annotations else {}),
+    )
+
+
+def test_helm_hook_job_template_change_is_update():
+    hook = {"helm.sh/hook": "pre-upgrade", "helm.sh/hook-delete-policy": "before-hook-creation"}
+    (change,) = diff_manifests([job(annotations=hook)], [job("app:2", annotations=hook)])
+    assert change.action is Action.UPDATE
+    assert run([job(annotations=hook)], [job("app:2", annotations=hook)]) == []
+
+
+def test_plain_job_template_change_is_still_pg102():
+    findings = run([job()], [job("app:2")])
+    assert ("PG102", "Job/migrate", "HIGH") in ids(findings)
+
+
+def test_keep_policy_pvc_removed_is_forget_and_low():
+    kept = pvc(annotations={"helm.sh/resource-policy": "keep"})
+    (change,) = diff_manifests([kept], [])
+    assert change.action is Action.FORGET
+    findings = run([kept], [])
+    assert ids(findings) == [("PG101", "PersistentVolumeClaim/data", "LOW")]
+    assert "resource-policy: keep" in findings[0].message
+    assert overall_risk([change], findings) is Risk.LOW
+
+
+def test_keep_policy_does_not_soften_replace():
+    kept = pvc(annotations={"helm.sh/resource-policy": "keep"})
+    changed = pvc(annotations={"helm.sh/resource-policy": "keep"})
+    changed["spec"]["storageClassName"] = "io2"
+    findings = run([kept], [changed])
+    assert ("PG101", "PersistentVolumeClaim/data", "CRITICAL") in ids(findings)
+
+
+def test_pvc_without_keep_is_still_critical():
+    assert ids(run([pvc()], [])) == [("PG101", "PersistentVolumeClaim/data", "CRITICAL")]
+
+
+def test_forget_does_not_count_as_mass_delete():
+    kept = [pvc(f"d{i}", annotations={"helm.sh/resource-policy": "keep"}) for i in range(8)]
+    findings = run(kept, [], config_from_dict({"thresholds": {"max_deletes": 1}}))
+    assert not [f for f in findings if f.rule_id == "PG004"]
+
+
+def test_hook_added_in_same_pr_still_gives_pg102():
+    hook = {"helm.sh/hook": "pre-upgrade"}
+    findings = run([job()], [job("app:2", annotations=hook)])
+    assert ("PG102", "Job/migrate", "HIGH") in ids(findings)
+
+
+def test_removed_hook_is_forget():
+    hook_pvc = pvc(annotations={"helm.sh/hook": "pre-install"})
+    (change,) = diff_manifests([hook_pvc], [])
+    assert change.action is Action.FORGET
+    (f,) = run([hook_pvc], [])
+    assert f.risk is Risk.LOW and "Helm hook" in f.message
