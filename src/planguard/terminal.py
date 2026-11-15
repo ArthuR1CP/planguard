@@ -73,6 +73,8 @@ def render_text(report: Report, color: bool = False) -> str:
         paint(f"{c[Action.REPLACE]} to replace", "red"),
         paint(f"{c[Action.DELETE]} to destroy", "red"),
     ]
+    if c[Action.FORGET]:
+        summary.append(paint(f"{c[Action.FORGET]} left in place", "magenta"))
     if report.ignored:
         summary.append(paint(f"{len(report.ignored)} ignored", "dim"))
     out.append("Plan: " + ", ".join(summary))

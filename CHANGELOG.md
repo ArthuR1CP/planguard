@@ -14,6 +14,12 @@ All notable changes to this project are documented here. The format follows
   `planguard k8s --namespace` option or `k8s-namespace` input; without it, pairing is
   unchanged. Displayed addresses are unchanged. Moving an object to another namespace is
   still a delete + create.
+- Helm hooks (`helm.sh/hook` on both the old and the new object) no longer trigger PG102
+  when their immutable fields change (e.g. a new image in a migration Job), since Helm
+  recreates them on every release. Plain Jobs still do.
+- An object removed from the chart with `helm.sh/resource-policy: keep`, or a removed hook,
+  is classified as `forget` instead of `delete`: Helm leaves it in the cluster. PG101 reports
+  it as a LOW note, and it no longer counts toward PG004.
 
 ## [1.3.1] - 2026-11-09
 

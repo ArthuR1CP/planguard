@@ -205,6 +205,7 @@ def render_markdown(report: Report) -> str:
     lines.append(
         f"**Plan:** ➕ {c[Action.CREATE]} to add · ✏️ {c[Action.UPDATE]} to change · "
         f"♻️ {c[Action.REPLACE]} to replace · 🗑️ {c[Action.DELETE]} to destroy"
+        + (f" · 👋 {c[Action.FORGET]} left in place" if c[Action.FORGET] else "")
         + (f" · 🙈 {len(report.ignored)} ignored" if report.ignored else "")
     )
     lines.append("")

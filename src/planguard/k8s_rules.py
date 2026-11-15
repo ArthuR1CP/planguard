@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
-from planguard.k8s import PROVIDER, get_path
+from planguard.k8s import PROVIDER, get_path, has_keep_policy
 from planguard.models import Action, Finding, ResourceChange, Risk
 from planguard.rules import _self, matches_any, rule
 
@@ -63,6 +63,21 @@ def k8s_stateful_delete(change: ResourceChange, cfg: Config) -> Iterator[Finding
     if not _k8s(change):
         return
     kinds = STATEFUL_KINDS + cfg.stateful_kinds
+    if change.action is Action.FORGET and matches_any(change.type, kinds):
+        why = (
+            "`helm.sh/resource-policy: keep`"
+            if has_keep_policy(change.before)
+            else "it is a Helm hook (`helm.sh/hook`)"
+        )
+        yield _self("PG101").finding(
+            change.address,
+            f"`{change.address}` is removed from the chart but Helm leaves it in the cluster "
+            f"({why}); it is orphaned, not deleted",
+            risk=Risk.LOW,
+            action=change.action.value,
+            kind=change.type,
+        )
+        return
     deleting = change.action is Action.DELETE and matches_any(change.type, kinds)
     recreating = change.action is Action.REPLACE and (
         change.type in _DATA_ON_REPLACE or matches_any(change.type, cfg.stateful_kinds)

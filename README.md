@@ -158,6 +158,8 @@ For Terraform, planguard reads `resource_changes` from the plan. For Kubernetes,
 | PG105 | `k8s-capacity-drop` | 🟡 MEDIUM | A Deployment/StatefulSet scaled to 0 replicas, or a PodDisruptionBudget deleted |
 | PG106 | `k8s-pod-privileged` | 🟡 MEDIUM | Pods gain privileged containers, `hostNetwork` / `hostPID` / `hostIPC`, `hostPath` volumes, or `SYS_ADMIN` / `NET_ADMIN` capabilities |
 
+Helm hooks (`helm.sh/hook`) are recreated on every release, so their immutable fields don't trigger PG102. An object removed from the chart that Helm leaves in the cluster (`helm.sh/resource-policy: keep`, or a hook) is shown as `forget`, and PG101 only adds a 🟢 LOW note for it.
+
 PG004 (`mass-delete`) and PG006 (`protected`) apply to both. In Kubernetes, mark an object as protected with the label or annotation `planguard/protected: "true"`.
 
 > [!NOTE]
