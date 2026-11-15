@@ -4,7 +4,19 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.4.0] - 2026-11-15
+
+Thanks to @cerepx for all three changes in this release.
+
+### Added
+- Reports list config settings that weaken the defaults (`fail_on` above `high`, `ignore`
+  patterns, rules turned off or lowered, a higher `max_deletes`, extra `public_ports`, a
+  default protected tag removed), in a warning block in Markdown, the terminal and
+  `config_warnings` in the JSON report. They don't change the risk or the exit code, and the
+  default config shows nothing.
+- Action input `config-from-base`: read `.planguard.yml` from the PR base commit, so a PR
+  can't loosen its own checks. Applies to pull request events only. Fails with an error when
+  the base commit can't be fetched; uses the built-in defaults when the base has no config.
 
 ### Fixed
 - Kubernetes: when the release namespace is known, an object without `metadata.namespace` is
@@ -20,16 +32,6 @@ All notable changes to this project are documented here. The format follows
 - An object removed from the chart with `helm.sh/resource-policy: keep`, or a removed hook,
   is classified as `forget` instead of `delete`: Helm leaves it in the cluster. PG101 reports
   it as a LOW note, and it no longer counts toward PG004.
-
-### Added
-- Reports list config settings that weaken the defaults (`fail_on` above `high`, `ignore`
-  patterns, rules turned off or lowered, a higher `max_deletes`, extra `public_ports`, a
-  default protected tag removed), in a warning block in Markdown, the terminal and
-  `config_warnings` in the JSON report. They don't change the risk or the exit code, and the
-  default config shows nothing.
-- Action input `config-from-base`: read `.planguard.yml` from the PR base commit, so a PR
-  can't loosen its own checks. Applies to pull request events only. Fails with an error when
-  the base commit can't be fetched; uses the built-in defaults when the base has no config.
 
 ## [1.3.1] - 2026-11-09
 
@@ -89,6 +91,7 @@ All notable changes to this project are documented here. The format follows
   updated through `gh api`), and outputs `risk`, `failed`, `headline`.
 - Dogfooding `demo` workflow that runs a real Terraform plan from `examples/`.
 
+[1.4.0]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.4.0
 [1.3.1]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.3.1
 [1.3.0]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ArthuR1CP/planguard/releases/tag/v1.2.0
