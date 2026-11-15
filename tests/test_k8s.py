@@ -336,3 +336,58 @@ def test_mass_delete_counts_kubernetes():
     before = [obj("ConfigMap", f"c{i}") for i in range(3)]
     found = run(before, [], Config(max_deletes=2))
     assert ("PG004", "(plan)", "HIGH") in ids(found)
+
+
+# ---------------------------------------------------------------- namespace pairing
+
+
+def pvc(name="data", namespace=None, **meta):
+    return obj(
+        "PersistentVolumeClaim",
+        name,
+        namespace=namespace,
+        spec={"storageClassName": "gp3", "accessModes": ["ReadWriteOnce"]},
+        **meta,
+    )
+
+
+def test_explicit_release_namespace_is_not_delete_and_create():
+    (change,) = diff_manifests([pvc()], [pvc(namespace="default")])
+    assert change.action is Action.NOOP
+    assert change.address == "PersistentVolumeClaim/default/data"
+    assert run([pvc()], [pvc(namespace="default")]) == []
+
+
+def test_release_namespace_is_configurable():
+    (change,) = diff_manifests([pvc()], [pvc(namespace="shop")], namespace="shop")
+    assert change.action is Action.NOOP
+    # With the default release namespace, `shop` is a different namespace: a real move.
+    actions = sorted(c.action.value for c in diff_manifests([pvc()], [pvc(namespace="shop")]))
+    assert actions == ["create", "delete"]
+
+
+def test_move_to_other_namespace_is_still_critical():
+    findings = run([pvc()], [pvc(namespace="other")])
+    assert ("PG101", "PersistentVolumeClaim/data", "CRITICAL") in ids(findings)
+
+
+def test_explicit_namespace_with_real_change_is_update():
+    before = deploy()
+    after = deploy(replicas=3)
+    after["metadata"]["namespace"] = "default"
+    (change,) = diff_manifests([before], [after])
+    assert change.action is Action.UPDATE
+
+
+def test_cli_namespace_option(tmp_path):
+    from planguard.cli import main
+
+    (tmp_path / "a.yaml").write_text(
+        "kind: PersistentVolumeClaim\napiVersion: v1\nmetadata: {name: d}\n"
+    )
+    (tmp_path / "b.yaml").write_text(
+        "kind: PersistentVolumeClaim\napiVersion: v1\nmetadata: {name: d, namespace: shop}\n"
+    )
+    a, b = str(tmp_path / "a.yaml"), str(tmp_path / "b.yaml")
+    assert main(["k8s", a, b, "-f", "json"]) == 1
+    assert main(["k8s", a, b, "-f", "json", "--namespace", "shop"]) == 0

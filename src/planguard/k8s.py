@@ -13,6 +13,7 @@ from planguard.models import Action, ResourceChange
 from planguard.parser import PlanError
 
 PROVIDER = "kubernetes"
+DEFAULT_NAMESPACE = "default"
 
 CLUSTER_SCOPED_KINDS = frozenset(
     {
@@ -132,6 +133,32 @@ def address(obj: dict[str, Any]) -> str:
     return f"{kind}/{namespace}/{meta['name']}"
 
 
+def pair_key(obj: dict[str, Any], namespace: str = DEFAULT_NAMESPACE) -> tuple[str, str, str]:
+    """``(kind, namespace, name)`` used to match an object across the two renders.
+
+    A missing namespace means the release namespace, which is how Helm and kubectl apply it.
+    Cluster-scoped kinds get an empty namespace.
+    """
+    kind = str(obj["kind"])
+    meta = obj.get("metadata") or {}
+    ns = "" if kind in CLUSTER_SCOPED_KINDS else str(meta.get("namespace") or namespace)
+    return kind, ns, str(meta["name"])
+
+
+def _same(before: dict[str, Any], after: dict[str, Any], namespace: str) -> bool:
+    """Equal once an explicit release namespace and an implicit one are treated alike."""
+    if before == after:
+        return True
+
+    def strip(obj: dict[str, Any]) -> dict[str, Any]:
+        meta = obj.get("metadata") or {}
+        if meta.get("namespace") != namespace:
+            return obj
+        return {**obj, "metadata": {k: v for k, v in meta.items() if k != "namespace"}}
+
+    return strip(before) == strip(after)
+
+
 def get_path(obj: dict[str, Any] | None, path: tuple[str, ...]) -> Any:
     cur: Any = obj
     for part in path:
@@ -167,23 +194,31 @@ def immutable_changes(kind: str, before: dict[str, Any], after: dict[str, Any]) 
 
 
 def diff_manifests(
-    before: list[dict[str, Any]], after: list[dict[str, Any]]
+    before: list[dict[str, Any]],
+    after: list[dict[str, Any]],
+    namespace: str = DEFAULT_NAMESPACE,
 ) -> list[ResourceChange]:
-    """Pair objects by address and classify each as create/update/replace/delete/no-op."""
-    old = {address(o): o for o in before}
-    new = {address(o): o for o in after}
+    """Pair objects across the two renders and classify each change.
+
+    Objects are paired by kind, name and namespace. An object without a namespace lives in
+    the release ``namespace``, so adding ``metadata.namespace: <release namespace>`` to a
+    template is not a delete + create. Displayed addresses are unchanged (``address()``).
+    """
+    old = {pair_key(o, namespace): o for o in before}
+    new = {pair_key(o, namespace): o for o in after}
     changes: list[ResourceChange] = []
-    for addr in sorted(old.keys() | new.keys()):
-        b, a = old.get(addr), new.get(addr)
+    for key in old.keys() | new.keys():
+        b, a = old.get(key), new.get(key)
         obj = a or b
         assert obj is not None
+        addr = address(obj)
         kind = str(obj["kind"])
         replace_paths: list[list[str]] = []
         if b is None:
             action = Action.CREATE
         elif a is None:
             action = Action.DELETE
-        elif a == b:
+        elif _same(b, a, namespace):
             action = Action.NOOP
         else:
             replace_paths = immutable_changes(kind, b, a)
@@ -201,4 +236,5 @@ def diff_manifests(
                 tags=_labels(b, a),
             )
         )
+    changes.sort(key=lambda c: c.address)
     return changes

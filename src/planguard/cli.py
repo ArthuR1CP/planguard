@@ -9,7 +9,7 @@ from pathlib import Path
 
 from planguard import __version__
 from planguard.config import Config, ConfigError, load_config, parse_fail_on
-from planguard.k8s import diff_manifests, load_manifests
+from planguard.k8s import DEFAULT_NAMESPACE, diff_manifests, load_manifests
 from planguard.parser import PlanError, load_plan, parse_changes
 from planguard.report import Report, build_report, render_json, render_markdown
 from planguard.rules import RULES
@@ -68,6 +68,13 @@ def _parser() -> argparse.ArgumentParser:
     )
     k8s.add_argument("before", help="manifests before the change (file, directory or /dev/null)")
     k8s.add_argument("after", help="manifests after the change (file, directory or /dev/null)")
+    k8s.add_argument(
+        "-n",
+        "--namespace",
+        default=DEFAULT_NAMESPACE,
+        help="namespace of objects that don't set one, i.e. the release namespace "
+        f"(default: {DEFAULT_NAMESPACE})",
+    )
     _add_report_options(k8s)
 
     sub.add_parser("rules", help="list built-in rules")
@@ -106,7 +113,9 @@ def _analyze(args: argparse.Namespace) -> int:
 
 def _k8s(args: argparse.Namespace) -> int:
     cfg = _config(args)
-    changes = diff_manifests(load_manifests(args.before), load_manifests(args.after))
+    changes = diff_manifests(
+        load_manifests(args.before), load_manifests(args.after), namespace=args.namespace
+    )
     return _emit(build_report(changes, cfg), args)
 
 
